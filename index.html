@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3D Planet Game: Super Editor Final</title>
+    <title>3D Planet Game: Crystal Edition</title>
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Comfortaa:wght@700&family=Bungee&family=Kelly+Slab&family=Monoton&family=Pacifico&family=Ruslan+Display&display=swap" rel="stylesheet">
     <style>
         body { margin: 0; overflow: hidden; font-family: sans-serif; background: #1a1a1a; }
@@ -117,6 +117,17 @@
         <div class="input-wrap"><input type="text" id="t4" placeholder="Фишка 4" oninput="update()"><button class="clear-btn" onclick="clearInp('t4')">×</button></div>
     </div>
 
+    <div class="half-width-sliders" style="margin-bottom: 10px;">
+        <div>
+            <label class="size-label">ШИРИНА ФИШКИ: <span id="tw-val">60</span>px</label>
+            <input type="range" id="token-w" min="10" max="250" value="60" oninput="update()">
+        </div>
+        <div>
+            <label class="size-label">ВЫСОТА ФИШКИ: <span id="th-val">60</span>px</label>
+            <input type="range" id="token-h" min="10" max="250" value="60" oninput="update()">
+        </div>
+    </div>
+
     <div class="input-wrap"><input type="text" id="ladder-url" placeholder="URL Лестницы" oninput="update()"><button class="clear-btn" onclick="clearInp('ladder-url')">×</button></div>
     <div class="input-wrap"><input type="text" id="snake-url" placeholder="URL Змеи" oninput="update()"><button class="clear-btn" onclick="clearInp('snake-url')">×</button></div>
 
@@ -162,7 +173,7 @@
     <button class="btn" style="background:#ff9800" onclick="state.points.pop(); draw(); update();">Отмена шага</button>
     <button class="btn" style="background:#2196F3" onclick="save()">Скопировать ссылку</button>
     <button class="btn" style="background:#673ab7" onclick="getIframe()">Получить код iFrame</button>
-    <button class="btn" style="background:#f44336" onclick="if(confirm('Очистить все?')){localStorage.removeItem('game_editor_state'); location.reload();}">Очистить всё</button>
+    <button class="btn" style="background:#f44336" onclick="clearFieldOnly()">Очистить поле</button>
 </div>
 
 <div id="victory-overlay" onclick="location.reload()">
@@ -192,6 +203,7 @@
     let state = { 
         bg: '', modalBgImg: '', music: '', tokens: ['', '', '', ''], ladderImg: '', snakeImg: '', points: [], 
         cellSize: 60, ladderTh: 60, snakeTh: 60, tasks: [], playerCount: 4,
+        tokenW: 60, tokenH: 60,
         colors: { dots: '#ffffff', modalBg: '#fff9e6', modalTxt: '#333333', btnBg: '#4CAF50', trail: '#ffffff' }, 
         neon: true, randQ: true, cellShape: 'circle', font: 'Arial', diceSkin: 'classic',
         trailType: 'match',
@@ -204,14 +216,26 @@
     const snakeImgObj = new Image();
     
     let tPos = [
-        {x:50,y:50,tx:50,ty:50, angle:0, isWin:false}, {x:120,y:50,tx:120,ty:50, angle:0, isWin:false}, 
-        {x:50,y:120,tx:50,ty:120, angle:0, isWin:false}, {x:120,y:120,tx:120,ty:120, angle:0, isWin:false}
+        {x:window.innerWidth-150,y:50,tx:window.innerWidth-150,ty:50, angle:0, isWin:false}, 
+        {x:window.innerWidth-80,y:50,tx:window.innerWidth-80,ty:50, angle:0, isWin:false}, 
+        {x:window.innerWidth-150,y:120,tx:window.innerWidth-150,ty:120, angle:0, isWin:false}, 
+        {x:window.innerWidth-80,y:120,tx:window.innerWidth-80,ty:120, angle:0, isWin:false}
     ];
     let dragIdx = null, isGame = false, diceVal = "?", isRoll = false, won = false;
     let linkFrom = null, isLinkMode = false, particles = [], trailParticles = [], questionQueue = [], currentQuestionIdx = 0;
     let pulseFrame = 0, hue = 0, currentPlayer = 0;
 
     function clearInp(id) { document.getElementById(id).value = ''; update(); }
+
+    function clearFieldOnly() {
+        if(confirm('Очистить только игровое поле (маршрут, змей и лестницы)?')) {
+            state.points = [];
+            state.links = [];
+            localStorage.setItem('game_editor_state', JSON.stringify(state));
+            draw();
+            update();
+        }
+    }
 
     function playSfx(freq, type = 'sine', duration = 0.2, volume = 0.1) {
         if(!audioCtx) return;
@@ -294,6 +318,8 @@
         document.getElementById('cell-size').value = state.cellSize || 60;
         document.getElementById('ladder-th').value = state.ladderTh || 60;
         document.getElementById('snake-th').value = state.snakeTh || 60;
+        document.getElementById('token-w').value = state.tokenW || 60;
+        document.getElementById('token-h').value = state.tokenH || 60;
         document.getElementById('neon-on').checked = state.neon;
         document.getElementById('cell-shape').value = state.cellShape || 'circle';
         document.getElementById('c-dots').value = state.colors.dots;
@@ -314,7 +340,6 @@
     }
 
     function animate() {
-        // ИСПРАВЛЕНИЕ: Замедляем шаг пульсации для корректной работы в iFrame Genially
         pulseFrame += 0.035; 
         hue = (hue + 2) % 360;
         tPos.forEach((p, i) => { 
@@ -390,6 +415,8 @@
         state.cellSize = parseInt(document.getElementById('cell-size').value);
         state.ladderTh = parseInt(document.getElementById('ladder-th').value);
         state.snakeTh = parseInt(document.getElementById('snake-th').value);
+        state.tokenW = parseInt(document.getElementById('token-w').value);
+        state.tokenH = parseInt(document.getElementById('token-h').value);
         state.neon = document.getElementById('neon-on').checked;
         state.cellShape = document.getElementById('cell-shape').value;
         state.font = document.getElementById('game-font').value;
@@ -397,7 +424,7 @@
         state.trailType = document.getElementById('trail-type').value;
         state.playerCount = parseInt(document.getElementById('p-count').value);
         state.colors = { dots: document.getElementById('c-dots').value, modalBg: document.getElementById('c-bg').value, modalTxt: document.getElementById('c-txt').value, btnBg: document.getElementById('c-btn').value, trail: document.getElementById('c-trail').value };
-        document.getElementById('sz-val').innerText = state.cellSize; document.getElementById('l-th-val').innerText = state.ladderTh; document.getElementById('s-th-val').innerText = state.snakeTh; document.getElementById('font-preview').style.fontFamily = state.font;
+        document.getElementById('sz-val').innerText = state.cellSize; document.getElementById('l-th-val').innerText = state.ladderTh; document.getElementById('s-th-val').innerText = state.snakeTh; document.getElementById('tw-val').innerText = state.tokenW; document.getElementById('th-val').innerText = state.tokenH; document.getElementById('font-preview').style.fontFamily = state.font;
         const qs = document.getElementById('qs').value.split('\n'), ans = document.getElementById('ans').value.split('\n');
         state.tasks = qs.map((q, i) => ({ q: q.trim(), a: (ans[i] || '').trim() })).filter(t => t.q);
         applyStateToAssets();
@@ -418,30 +445,70 @@
                 if (img.complete && img.src) { ctx.save(); ctx.translate(x1, y1); ctx.rotate(angle + Math.PI/2); ctx.drawImage(img, -th/2, -dist, th, dist); ctx.restore(); }
             }
         });
+
         state.points.forEach((p, i) => {
             const px = p.x*cvs.width, py = p.y*cvs.height; let s = state.cellSize;
             const hasToken = tPos.some(tp => Math.hypot(tp.x-px, tp.y-py) < 15);
-            ctx.beginPath(); 
-            if (state.neon) { ctx.shadowBlur = hasToken ? 25 : 15; ctx.shadowColor = hasToken ? `hsl(${hue}, 100%, 70%)` : state.colors.dots; }
-            ctx.strokeStyle = hasToken ? `hsl(${hue}, 100%, 60%)` : ((linkFrom === i) ? "#e91e63" : (p.type==='skip'?"#f44336":p.type==='boost'?"#4CAF50":p.type==='task'?"#2196F3":state.colors.dots));
-            ctx.lineWidth = hasToken ? 6 : 4; 
-            if (state.cellShape === 'circle') ctx.arc(px, py, s/2, 0, 7); 
-            else if (state.cellShape === 'square') ctx.rect(px-s/2, py-s/2, s, s); 
-            else ctx.rect(px-s, py-s/2, s*2, s);
-            ctx.stroke(); 
-            if(!isGame) { ctx.shadowBlur = 0; ctx.fillStyle = "white"; ctx.font = "14px Arial"; ctx.fillText(i+1, px-5, py+5); }
+            let baseColor = hasToken ? `hsl(${hue}, 100%, 60%)` : (p.type==='skip'?"#f44336":p.type==='boost'?"#4CAF50":p.type==='task'?"#2196F3":state.colors.dots);
+
+            ctx.save();
+            if (state.neon) { ctx.shadowBlur = hasToken ? 35 : 15; ctx.shadowColor = baseColor; }
+
+            ctx.fillStyle = "rgba(255, 255, 255, 0.15)";
+            ctx.beginPath();
+            if (state.cellShape === 'circle') ctx.arc(px, py, s/2, 0, 7);
+            else if (state.cellShape === 'square') ctx.roundRect(px-s/2, py-s/2, s, s, 10);
+            else ctx.roundRect(px-s, py-s/2, s*2, s, 10);
+            ctx.fill();
+
+            let grad = ctx.createRadialGradient(px, py, s/6, px, py, s/1.5);
+            grad.addColorStop(0, "rgba(255,255,255,0)");
+            grad.addColorStop(1, baseColor.replace('rgb', 'rgba').replace(')', ',0.4)'));
+            ctx.fillStyle = grad;
+            ctx.fill();
+
+            ctx.strokeStyle = "rgba(255,255,255,0.6)";
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            ctx.strokeStyle = baseColor;
+            ctx.lineWidth = 1;
+            ctx.globalAlpha = 0.8;
+            ctx.stroke();
+
+            ctx.globalAlpha = 0.8;
+            ctx.fillStyle = "white";
+            ctx.beginPath();
+            if (state.cellShape === 'circle') ctx.arc(px - s/4.5, py - s/4.5, s/8, 0, 7);
+            else ctx.ellipse(px - s/1.5, py - s/4.5, s/6, s/10, Math.PI/4, 0, 7);
+            ctx.fill();
+
+            ctx.restore();
+            if(!isGame) { ctx.shadowBlur = 0; ctx.fillStyle = "white"; ctx.font = "bold 16px Arial"; ctx.textAlign="center"; ctx.fillText(i+1, px, py+6); }
         });
-        ctx.font = `bold 20px ${state.font}`; ctx.fillStyle = "gold"; ctx.shadowBlur = 0; ctx.textAlign = "left";
-        ctx.fillText("START", state.startPos.x, state.startPos.y); ctx.fillText("FINISH", state.finishPos.x, state.finishPos.y);
+
+        ctx.save();
+        ctx.font = `bold 40px ${state.font}`; 
+        ctx.fillStyle = state.colors.dots; 
+        if(state.neon) { ctx.shadowBlur = 25; ctx.shadowColor = state.colors.dots; }
+        ctx.textAlign = "left";
+        ctx.fillText("START", state.startPos.x, state.startPos.y); 
+        ctx.fillText("FINISH", state.finishPos.x, state.finishPos.y);
+        ctx.restore();
+
         for(let i=0; i < (isGame ? state.playerCount : 4); i++) {
-            let s = state.cellSize;
-            // ИСПРАВЛЕНИЕ: Плавная пульсация (размер меняется медленнее)
-            if (isGame && i === currentPlayer && !won) s += Math.sin(pulseFrame)*8;
+            let tw = state.tokenW || 60;
+            let th = state.tokenH || 60;
+            if (isGame && i === currentPlayer && !won) {
+                let pulse = Math.sin(pulseFrame)*5;
+                tw += pulse; th += pulse;
+            }
             ctx.save(); ctx.translate(tPos[i].x, tPos[i].y); ctx.rotate(tPos[i].angle);
-            if (state.tokens[i] && tImgs[i].complete) ctx.drawImage(tImgs[i], -s/2, -s/2, s, s);
-            else { ctx.fillStyle = ['red','blue','green','yellow'][i]; ctx.beginPath(); ctx.arc(0, 0, s/3, 0, 7); ctx.fill(); }
+            if (state.tokens[i] && tImgs[i].complete) ctx.drawImage(tImgs[i], -tw/2, -th/2, tw, th);
+            else { ctx.fillStyle = ['red','blue','green','yellow'][i]; ctx.beginPath(); ctx.arc(0, 0, tw/3, 0, 7); ctx.fill(); }
             ctx.restore();
         }
+
         const dx = cvs.width-110, dy = cvs.height-110; ctx.save();
         if(state.diceSkin === 'glass') { ctx.fillStyle = "rgba(255,255,255,0.3)"; ctx.strokeStyle = "rgba(255,255,255,0.8)"; ctx.lineWidth = 2; }
         else if(state.diceSkin === 'neon') { ctx.fillStyle = "#000"; ctx.strokeStyle = state.colors.dots; ctx.lineWidth = 4; ctx.shadowBlur = 15; ctx.shadowColor = state.colors.dots; }
@@ -456,7 +523,7 @@
         if (audioCtx.state === 'suspended') audioCtx.resume();
         const x = e.clientX, y = e.clientY;
         if (x > cvs.width-110 && y > cvs.height-110) { roll(); return; }
-        for(let i=0; i<state.playerCount; i++) if (Math.hypot(x-tPos[i].x, y-tPos[i].y) < state.cellSize/2) { dragIdx = 't'+i; return; }
+        for(let i=0; i<state.playerCount; i++) if (Math.hypot(x-tPos[i].x, y-tPos[i].y) < state.tokenW/2) { dragIdx = 't'+i; return; }
         if (Math.hypot(x-state.startPos.x, y-state.startPos.y) < 50) { dragIdx = 'start'; return; }
         if (Math.hypot(x-state.finishPos.x, y-state.finishPos.y) < 50) { dragIdx = 'finish'; return; }
         for (let i=0; i<state.points.length; i++) {
@@ -498,18 +565,24 @@
         dragIdx = null; update();
     };
 
-    function resize() { cvs.width = window.innerWidth; cvs.height = window.innerHeight; cnfCvs.width = window.innerWidth; cnfCvs.height = window.innerHeight; }
+    function resize() { 
+        cvs.width = window.innerWidth; cvs.height = window.innerHeight; 
+        cnfCvs.width = window.innerWidth; cnfCvs.height = window.innerHeight; 
+        if(!isGame) {
+            tPos[0].tx = window.innerWidth-150; tPos[0].ty = 50;
+            tPos[1].tx = window.innerWidth-80; tPos[1].ty = 50;
+            tPos[2].tx = window.innerWidth-150; tPos[2].ty = 120;
+            tPos[3].tx = window.innerWidth-80; tPos[3].ty = 120;
+        }
+    }
     
     function getCleanUrl() { return window.location.href.split('?')[0]; }
-
     function save() { navigator.clipboard.writeText(getCleanUrl() + "?game=" + encode(state)); alert("URL Ссылка скопирована!"); }
-
     function getIframe() {
         const url = getCleanUrl() + "?game=" + encode(state);
         const code = `<iframe src="${url}" width="100%" height="600" style="border:none;" allow="autoplay; fullscreen"></iframe>`;
         navigator.clipboard.writeText(code); alert("Код iFrame для Genially скопирован!");
     }
-    
     init();
 </script>
 </body>
