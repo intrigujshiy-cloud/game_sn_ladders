@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3D Planet Game: Super Editor Final</title>
+    <title>3D Planet Game: Super Editor No-Memory</title>
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Comfortaa:wght@700&family=Bungee&family=Kelly+Slab&family=Monoton&family=Pacifico&family=Ruslan+Display&display=swap" rel="stylesheet">
     <style>
         body { margin: 0; overflow: hidden; font-family: sans-serif; background: #1a1a1a; }
@@ -49,7 +49,7 @@
             background-size: cover; background-position: center;
         }
         #task-modal.show { transform: translate(-50%, -50%) scale(1); display: block; }
-        #answer-input { width: 100%; padding: 12px; margin-bottom: 15px; border-radius: 8px; font-size: 16px; border: 1px solid #ccc; background: white; color: #333; padding-right: 12px; }
+        #answer-input { width: 100%; padding: 12px; margin-bottom: 15px; border-radius: 8px; font-size: 16px; border: 1px solid #ccc; background: white; color: #333; }
         #check-btn { padding: 12px 20px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; width: 100%; color: white; }
         #victory-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(45deg, #ff9999, #ffcc99, #ffff99, #99ff99, #99ccff, #cc99ff); background-size: 400% 400%; animation: rainbowMove 6s ease infinite; z-index: 20000; flex-direction: column; justify-content: center; align-items: center; color: #444; text-align: center; cursor: pointer; }
         #confetti-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
@@ -83,7 +83,7 @@
 
     <div class="neon-row">
         <label style="font-size:12px; font-weight:bold;">КОЛ-ВО ИГРОКОВ:</label>
-        <select id="p-count" onchange="update()" style="width:60px; margin:0; padding-right:5px;">
+        <select id="p-count" onchange="update()" style="width:60px; margin:0;">
             <option value="2">2</option>
             <option value="3">3</option>
             <option value="4" selected>4</option>
@@ -93,13 +93,13 @@
     <div class="colors-grid">
         <label>ХВОСТ ФИШКИ: 
             <select id="trail-type" onchange="update()">
-                <option value="match">В цвет фишки</option>
+                <option value="match">В цвет</option>
                 <option value="rainbow">РАДУГА</option>
                 <option value="custom">Свой цвет</option>
                 <option value="none">Нет</option>
             </select>
         </label>
-        <label>ЦВЕТ ХВОСТА <input type="color" id="c-trail" value="#ffffff" oninput="update()" style="padding:0; height:25px;"></label>
+        <label>ЦВЕТ ХВОСТА <input type="color" id="c-trail" value="#ffffff" oninput="update()" style="height:25px;"></label>
     </div>
 
     <label style="font-size:11px">СКИН КУБИКА:</label>
@@ -148,21 +148,21 @@
 
     <div class="neon-row">
         <label style="font-size:12px; font-weight:bold;">NEON EFFECT</label>
-        <input type="checkbox" id="neon-on" onchange="update()" checked style="width:20px; margin:0;">
+        <input type="checkbox" id="neon-on" onchange="update()" checked style="width:20px;">
     </div>
 
     <div class="colors-grid">
-        <label>Кружки <input type="color" id="c-dots" value="#ffffff" oninput="update()" style="padding:0; height:25px;"></label>
-        <label>Цвет окна <input type="color" id="c-bg" value="#fff9e6" oninput="update()" style="padding:0; height:25px;"></label>
-        <label>Текст окна <input type="color" id="c-txt" value="#333333" oninput="update()" style="padding:0; height:25px;"></label>
-        <label>Кнопка <input type="color" id="c-btn" value="#4CAF50" oninput="update()" style="padding:0; height:25px;"></label>
+        <label>Кружки <input type="color" id="c-dots" value="#ffffff" oninput="update()" style="height:25px;"></label>
+        <label>Цвет окна <input type="color" id="c-bg" value="#fff9e6" oninput="update()" style="height:25px;"></label>
+        <label>Текст окна <input type="color" id="c-txt" value="#333333" oninput="update()" style="height:25px;"></label>
+        <label>Кнопка <input type="color" id="c-btn" value="#4CAF50" oninput="update()" style="height:25px;"></label>
     </div>
 
     <button id="link-btn" class="btn" style="background:#9c27b0" onclick="toggleLinkMode()">Связать кружки</button>
     <button class="btn" style="background:#ff9800" onclick="state.points.pop(); draw(); update();">Отмена шага</button>
     <button class="btn" style="background:#2196F3" onclick="save()">Скопировать ссылку</button>
     <button class="btn" style="background:#673ab7" onclick="getIframe()">Получить код iFrame</button>
-    <button class="btn" style="background:#f44336" onclick="if(confirm('Очистить все?')){localStorage.removeItem('game_editor_state'); location.reload();}">Очистить всё</button>
+    <button class="btn" style="background:#f44336" onclick="if(confirm('Очистить все?')){location.reload();}">Очистить всё</button>
 </div>
 
 <div id="victory-overlay" onclick="location.reload()">
@@ -186,7 +186,6 @@
     const cnfCvs = document.getElementById('confetti-canvas');
     const cnfCtx = cnfCvs.getContext('2d');
     
-    // ИСПРАВЛЕНИЕ: AudioContext не создается сразу, чтобы избежать блокировки в iFrame
     let audioCtx = null;
     const bgMusic = new Audio(); bgMusic.loop = true;
 
@@ -195,15 +194,13 @@
         cellSize: 60, ladderTh: 60, snakeTh: 60, tasks: [], playerCount: 4,
         colors: { dots: '#ffffff', modalBg: '#fff9e6', modalTxt: '#333333', btnBg: '#4CAF50', trail: '#ffffff' }, 
         neon: true, randQ: true, cellShape: 'circle', font: 'Arial', diceSkin: 'classic',
-        trailType: 'match',
-        startPos: {x:100, y:150}, finishPos: {x:100, y:250}, links: []
+        trailType: 'match', startPos: {x:100, y:150}, finishPos: {x:100, y:250}, links: []
     };
 
     const bgImg = new Image();
     const tImgs = [new Image(), new Image(), new Image(), new Image()];
     const ladderImgObj = new Image();
     const snakeImgObj = new Image();
-    
     let tPos = [
         {x:50,y:50,tx:50,ty:50, angle:0, isWin:false}, {x:120,y:50,tx:120,ty:50, angle:0, isWin:false}, 
         {x:50,y:120,tx:50,ty:120, angle:0, isWin:false}, {x:120,y:120,tx:120,ty:120, angle:0, isWin:false}
@@ -263,16 +260,11 @@
         
         if (d) {
             try {
-                state = decode(d); isGame = true;
+                state = decode(d);
+                isGame = true;
                 document.getElementById('panel').style.display = 'none';
                 document.getElementById('turn-indicator').style.display = 'block';
             } catch(e) { console.error(e); }
-        } else {
-            const saved = localStorage.getItem('game_editor_state');
-            if(saved) {
-                state = JSON.parse(saved);
-                loadStateToPanel();
-            }
         }
         
         document.body.style.fontFamily = state.font;
@@ -280,31 +272,6 @@
         if(state.music) { bgMusic.src = state.music; }
         applyStateToAssets(); prepareQuestions();
         update(); animate();
-    }
-
-    function loadStateToPanel() {
-        document.getElementById('bg-url').value = state.bg || '';
-        document.getElementById('modal-bg-url').value = state.modalBgImg || '';
-        document.getElementById('music-url').value = state.music || '';
-        document.getElementById('ladder-url').value = state.ladderImg || '';
-        document.getElementById('snake-url').value = state.snakeImg || '';
-        document.getElementById('game-font').value = state.font || 'Arial';
-        document.getElementById('p-count').value = state.playerCount || 4;
-        document.getElementById('dice-skin').value = state.diceSkin || 'classic';
-        document.getElementById('trail-type').value = state.trailType || 'match';
-        document.getElementById('cell-size').value = state.cellSize || 60;
-        document.getElementById('ladder-th').value = state.ladderTh || 60;
-        document.getElementById('snake-th').value = state.snakeTh || 60;
-        document.getElementById('neon-on').checked = state.neon;
-        document.getElementById('cell-shape').value = state.cellShape || 'circle';
-        document.getElementById('c-dots').value = state.colors.dots;
-        document.getElementById('c-bg').value = state.colors.modalBg;
-        document.getElementById('c-txt').value = state.colors.modalTxt;
-        document.getElementById('c-btn').value = state.colors.btnBg;
-        document.getElementById('c-trail').value = state.colors.trail;
-        state.tokens.forEach((url, i) => { if(document.getElementById('t'+(i+1))) document.getElementById('t'+(i+1)).value = url || ''; });
-        document.getElementById('qs').value = state.tasks.map(t => t.q).join('\n');
-        document.getElementById('ans').value = state.tasks.map(t => t.a).join('\n');
     }
 
     function applyStateToAssets() {
@@ -315,7 +282,8 @@
     }
 
     function animate() {
-        pulseFrame += 0.07; hue = (hue + 2) % 360;
+        pulseFrame += 0.035;
+        hue = (hue + 2) % 360;
         tPos.forEach((p, i) => { 
             let oldX = p.x, oldY = p.y;
             p.x += (p.tx - p.x) * 0.35; p.y += (p.ty - p.y) * 0.35; 
@@ -343,9 +311,11 @@
     function toggleLinkMode() { isLinkMode = !isLinkMode; linkFrom = null; document.getElementById('link-btn').style.background = isLinkMode ? "#e91e63" : "#9c27b0"; }
 
     function roll() {
-        if (isRoll || won) return; isRoll = true; playDiceSound();
+        if (isRoll || won) return;
+        isRoll = true; playDiceSound();
         if(bgMusic.paused && state.music) bgMusic.play().catch(()=>{});
-        let c = 0; const iv = setInterval(() => { 
+        let c = 0;
+        const iv = setInterval(() => { 
             diceVal = Math.floor(Math.random() * 6) + 1; 
             if (++c > 12) { 
                 clearInterval(iv); isRoll = false; 
@@ -373,7 +343,8 @@
     }
 
     function checkAnswer() {
-        const m = document.getElementById('task-modal'); const taskIdx = m.getAttribute('data-ans-idx');
+        const m = document.getElementById('task-modal');
+        const taskIdx = m.getAttribute('data-ans-idx');
         if (document.getElementById('answer-input').value.trim().toLowerCase() === state.tasks[taskIdx].a.toLowerCase()) { m.classList.remove('show'); playSfx(600, 'sine', 0.2); currentQuestionIdx++; } else { playSfx(100, 'sawtooth', 0.3); alert("Wrong!"); }
     }
 
@@ -400,7 +371,6 @@
         const qs = document.getElementById('qs').value.split('\n'), ans = document.getElementById('ans').value.split('\n');
         state.tasks = qs.map((q, i) => ({ q: q.trim(), a: (ans[i] || '').trim() })).filter(t => t.q);
         applyStateToAssets();
-        localStorage.setItem('game_editor_state', JSON.stringify(state));
     }
 
     function draw() {
@@ -433,8 +403,7 @@
         ctx.font = `bold 20px ${state.font}`; ctx.fillStyle = "gold"; ctx.shadowBlur = 0; ctx.textAlign = "left";
         ctx.fillText("START", state.startPos.x, state.startPos.y); ctx.fillText("FINISH", state.finishPos.x, state.finishPos.y);
         for(let i=0; i < (isGame ? state.playerCount : 4); i++) {
-            let s = state.cellSize;
-            if (isGame && i === currentPlayer && !won) s += Math.sin(pulseFrame*3)*10;
+            let s = state.cellSize; if (isGame && i === currentPlayer && !won) s += Math.sin(pulseFrame)*8;
             ctx.save(); ctx.translate(tPos[i].x, tPos[i].y); ctx.rotate(tPos[i].angle);
             if (state.tokens[i] && tImgs[i].complete) ctx.drawImage(tImgs[i], -s/2, -s/2, s, s);
             else { ctx.fillStyle = ['red','blue','green','yellow'][i]; ctx.beginPath(); ctx.arc(0, 0, s/3, 0, 7); ctx.fill(); }
@@ -450,10 +419,8 @@
     }
 
     cvs.onmousedown = (e) => {
-        // ИСПРАВЛЕНИЕ: Инициализируем звук по клику (требование браузеров)
         if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         if (audioCtx.state === 'suspended') audioCtx.resume();
-        
         const x = e.clientX, y = e.clientY;
         if (x > cvs.width-110 && y > cvs.height-110) { roll(); return; }
         for(let i=0; i<state.playerCount; i++) if (Math.hypot(x-tPos[i].x, y-tPos[i].y) < state.cellSize/2) { dragIdx = 't'+i; return; }
@@ -461,7 +428,8 @@
         if (Math.hypot(x-state.finishPos.x, y-state.finishPos.y) < 50) { dragIdx = 'finish'; return; }
         for (let i=0; i<state.points.length; i++) {
             if (Math.hypot(x-state.points[i].x*cvs.width, y-state.points[i].y*cvs.height) < state.cellSize/2) {
-                if (isLinkMode) { if (linkFrom === null) linkFrom = i; else if (linkFrom !== i) { state.links.push({from: linkFrom, to: i}); linkFrom = null; update(); } } else if (!isGame) dragIdx = 'p'+i;
+                if (isLinkMode) { if (linkFrom === null) linkFrom = i;
+                else if (linkFrom !== i) { state.links.push({from: linkFrom, to: i}); linkFrom = null; update(); } } else if (!isGame) dragIdx = 'p'+i;
                 return;
             }
         }
@@ -499,22 +467,8 @@
     };
 
     function resize() { cvs.width = window.innerWidth; cvs.height = window.innerHeight; cnfCvs.width = window.innerWidth; cnfCvs.height = window.innerHeight; }
-    
-    // ИСПРАВЛЕНИЕ: Универсальная функция получения чистого URL
-    function getCleanUrl() {
-        return window.location.href.split('?')[0];
-    }
-
-    function save() { 
-        navigator.clipboard.writeText(getCleanUrl() + "?game=" + encode(state)); 
-        alert("URL Ссылка скопирована!"); 
-    }
-
-    function getIframe() {
-        const url = getCleanUrl() + "?game=" + encode(state);
-        const code = `<iframe src="${url}" width="100%" height="600" style="border:none;" allow="autoplay; fullscreen"></iframe>`;
-        navigator.clipboard.writeText(code); alert("Код iFrame для Genially скопирован!");
-    }
+    function save() { navigator.clipboard.writeText(window.location.href.split('?')[0] + "?game=" + encode(state)); alert("URL Ссылка скопирована!"); }
+    function getIframe() { const url = window.location.href.split('?')[0] + "?game=" + encode(state); const code = `<iframe src="${url}" width="100%" height="600" style="border:none;" allow="autoplay; fullscreen"></iframe>`; navigator.clipboard.writeText(code); alert("Код iFrame скопирован!"); }
     
     init();
 </script>
