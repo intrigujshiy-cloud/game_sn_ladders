@@ -186,7 +186,6 @@
     const cnfCvs = document.getElementById('confetti-canvas');
     const cnfCtx = cnfCvs.getContext('2d');
     
-    // ИСПРАВЛЕНИЕ: AudioContext не создается сразу, чтобы избежать блокировки в iFrame
     let audioCtx = null;
     const bgMusic = new Audio(); bgMusic.loop = true;
 
@@ -315,7 +314,9 @@
     }
 
     function animate() {
-        pulseFrame += 0.07; hue = (hue + 2) % 360;
+        // ИСПРАВЛЕНИЕ: Замедляем шаг пульсации для корректной работы в iFrame Genially
+        pulseFrame += 0.035; 
+        hue = (hue + 2) % 360;
         tPos.forEach((p, i) => { 
             let oldX = p.x, oldY = p.y;
             p.x += (p.tx - p.x) * 0.35; p.y += (p.ty - p.y) * 0.35; 
@@ -434,7 +435,8 @@
         ctx.fillText("START", state.startPos.x, state.startPos.y); ctx.fillText("FINISH", state.finishPos.x, state.finishPos.y);
         for(let i=0; i < (isGame ? state.playerCount : 4); i++) {
             let s = state.cellSize;
-            if (isGame && i === currentPlayer && !won) s += Math.sin(pulseFrame*3)*10;
+            // ИСПРАВЛЕНИЕ: Плавная пульсация (размер меняется медленнее)
+            if (isGame && i === currentPlayer && !won) s += Math.sin(pulseFrame)*8;
             ctx.save(); ctx.translate(tPos[i].x, tPos[i].y); ctx.rotate(tPos[i].angle);
             if (state.tokens[i] && tImgs[i].complete) ctx.drawImage(tImgs[i], -s/2, -s/2, s, s);
             else { ctx.fillStyle = ['red','blue','green','yellow'][i]; ctx.beginPath(); ctx.arc(0, 0, s/3, 0, 7); ctx.fill(); }
@@ -450,10 +452,8 @@
     }
 
     cvs.onmousedown = (e) => {
-        // ИСПРАВЛЕНИЕ: Инициализируем звук по клику (требование браузеров)
         if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         if (audioCtx.state === 'suspended') audioCtx.resume();
-        
         const x = e.clientX, y = e.clientY;
         if (x > cvs.width-110 && y > cvs.height-110) { roll(); return; }
         for(let i=0; i<state.playerCount; i++) if (Math.hypot(x-tPos[i].x, y-tPos[i].y) < state.cellSize/2) { dragIdx = 't'+i; return; }
@@ -500,15 +500,9 @@
 
     function resize() { cvs.width = window.innerWidth; cvs.height = window.innerHeight; cnfCvs.width = window.innerWidth; cnfCvs.height = window.innerHeight; }
     
-    // ИСПРАВЛЕНИЕ: Универсальная функция получения чистого URL
-    function getCleanUrl() {
-        return window.location.href.split('?')[0];
-    }
+    function getCleanUrl() { return window.location.href.split('?')[0]; }
 
-    function save() { 
-        navigator.clipboard.writeText(getCleanUrl() + "?game=" + encode(state)); 
-        alert("URL Ссылка скопирована!"); 
-    }
+    function save() { navigator.clipboard.writeText(getCleanUrl() + "?game=" + encode(state)); alert("URL Ссылка скопирована!"); }
 
     function getIframe() {
         const url = getCleanUrl() + "?game=" + encode(state);
