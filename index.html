@@ -285,17 +285,18 @@
         const d = p.get('game');
         
         if (d) {
-            try {
-                state = decode(d); isGame = true;
-                document.getElementById('panel').style.display = 'none';
-                document.getElementById('turn-indicator').style.display = 'block';
-            } catch(e) { console.error(e); }
+            try { state = decode(d); isGame = true; } catch(e) {}
         } else {
-            const saved = localStorage.getItem('game_editor_state');
-            if(saved) {
-                state = JSON.parse(saved);
-                loadStateToPanel();
-            }
+            const saved = localStorage.getItem('game_project_data') || localStorage.getItem('game_editor_state');
+            if(saved) { state = JSON.parse(saved); }
+        }
+
+        if (window.self !== window.top) {
+            isGame = true;
+            document.getElementById('panel').style.display = 'none';
+            document.getElementById('turn-indicator').style.display = 'block';
+        } else {
+            loadStateToPanel();
         }
         
         document.body.style.fontFamily = state.font;
@@ -428,7 +429,7 @@
         const qs = document.getElementById('qs').value.split('\n'), ans = document.getElementById('ans').value.split('\n');
         state.tasks = qs.map((q, i) => ({ q: q.trim(), a: (ans[i] || '').trim() })).filter(t => t.q);
         applyStateToAssets();
-        localStorage.setItem('game_editor_state', JSON.stringify(state));
+        localStorage.setItem('game_project_data', JSON.stringify(state));
     }
 
     function draw() {
@@ -577,12 +578,22 @@
     }
     
     function getCleanUrl() { return window.location.href.split('?')[0]; }
-    function save() { navigator.clipboard.writeText(getCleanUrl() + "?game=" + encode(state)); alert("URL Ссылка скопирована!"); }
-    function getIframe() {
-        const url = getCleanUrl() + "?game=" + encode(state);
-        const code = `<iframe src="${url}" width="100%" height="600" style="border:none;" allow="autoplay; fullscreen"></iframe>`;
-        navigator.clipboard.writeText(code); alert("Код iFrame для Genially скопирован!");
+
+    function save() {
+        localStorage.setItem('game_project_data', JSON.stringify(state));
+        const url = getCleanUrl(); 
+        navigator.clipboard.writeText(url);
+        alert("Проект сохранен! Ссылка скопирована (она теперь короткая).");
     }
+
+    function getIframe() {
+        localStorage.setItem('game_project_data', JSON.stringify(state));
+        const url = getCleanUrl();
+        const code = `<iframe src="${url}" width="100%" height="600" style="border:none;" allow="autoplay; fullscreen"></iframe>`;
+        navigator.clipboard.writeText(code);
+        alert("Короткий код iFrame скопирован!");
+    }
+
     init();
 </script>
 </body>
