@@ -162,7 +162,7 @@
     <button class="btn" style="background:#ff9800" onclick="state.points.pop(); draw(); update();">Отмена шага</button>
     <button class="btn" style="background:#2196F3" onclick="save()">Скопировать ссылку</button>
     <button class="btn" style="background:#673ab7" onclick="getIframe()">Получить код iFrame</button>
-    <button class="btn" style="background:#f44336" onclick="if(confirm('Очистить все?')){location.reload();}">Очистить всё</button>
+    <button class="btn" style="background:#f44336" onclick="clearFieldOnly()">Очистить поле</button>
 </div>
 
 <div id="victory-overlay" onclick="location.reload()">
@@ -219,6 +219,16 @@
     }
 
     function clearInp(id) { document.getElementById(id).value = ''; update(); }
+
+    // НОВАЯ ФУНКЦИЯ: Очищает только поле (точки и связи)
+    function clearFieldOnly() {
+        if(confirm('Очистить все кружки и связи на поле? Настройки в панели останутся.')) {
+            state.points = [];
+            state.links = [];
+            draw();
+            update();
+        }
+    }
 
     function playSfx(freq, type = 'sine', duration = 0.2, volume = 0.1) {
         if(!audioCtx) return;
@@ -401,7 +411,6 @@
             const px = p.x*cvs.width, py = p.y*cvs.height; let s = state.cellSize;
             const hasToken = tPos.some(tp => Math.hypot(tp.x-px, tp.y-py) < 15);
             
-            // Если на клетке фишка - она переливается радугой
             let baseColor;
             if (hasToken) {
                 baseColor = `hsl(${hue}, 100%, 60%)`;
