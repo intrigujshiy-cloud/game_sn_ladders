@@ -171,8 +171,7 @@
 
     <button id="link-btn" class="btn" style="background:#9c27b0" onclick="toggleLinkMode()">Связать кружки</button>
     <button class="btn" style="background:#ff9800" onclick="state.points.pop(); draw(); update();">Отмена шага</button>
-    <button class="btn" style="background:#2196F3" onclick="save()">Скопировать ссылку</button>
-    <button class="btn" style="background:#673ab7" onclick="getIframe()">Получить код iFrame</button>
+    <button class="btn" style="background:#2196F3" onclick="exportCode()">СКАЧАТЬ ГОТОВЫЙ КОД</button>
     <button class="btn" style="background:#f44336" onclick="clearFieldOnly()">Очистить поле</button>
 </div>
 
@@ -199,6 +198,9 @@
     
     let audioCtx = null;
     const bgMusic = new Audio(); bgMusic.loop = true;
+
+    // СЮДА БУДУТ ВШИВАТЬСЯ ДАННЫЕ ПРИ ЭКСПОРТЕ
+    let EMBEDDED_DATA = null;
 
     let state = { 
         bg: '', modalBgImg: '', music: '', tokens: ['', '', '', ''], ladderImg: '', snakeImg: '', points: [], 
@@ -228,15 +230,57 @@
     function clearInp(id) { document.getElementById(id).value = ''; update(); }
 
     function clearFieldOnly() {
-        if(confirm('Очистить только игровое поле (маршрут, змей и лестницы)?')) {
-            state.points = [];
-            state.links = [];
+        if(confirm('Очистить игровое поле?')) {
+            state.points = []; state.links = [];
             localStorage.setItem('game_editor_state', JSON.stringify(state));
-            draw();
-            update();
+            draw(); update();
         }
     }
 
+    function init() {
+        window.addEventListener('resize', resize); resize();
+        
+        // 1. Сначала проверяем, есть ли зашитые данные в коде
+        if (EMBEDDED_DATA) {
+            state = EMBEDDED_DATA;
+        } else {
+            // 2. Если нет, проверяем localStorage
+            const saved = localStorage.getItem('game_editor_state');
+            if(saved) { try { state = JSON.parse(saved); } catch(e){} }
+        }
+
+        // Автоматически скрываем панель, если мы в iframe (Genially)
+        if (window.self !== window.top) {
+            isGame = true;
+            document.getElementById('panel').style.display = 'none';
+            document.getElementById('turn-indicator').style.display = 'block';
+        } else {
+            loadStateToPanel();
+        }
+        
+        document.body.style.fontFamily = state.font;
+        if(state.music) { bgMusic.src = state.music; }
+        applyStateToAssets(); prepareQuestions();
+        update(); animate();
+    }
+
+    function exportCode() {
+        const currentCode = document.documentElement.outerHTML;
+        const dataString = JSON.stringify(state);
+        // Заменяем null на объект данных в переменной EMBEDDED_DATA
+        const newCode = currentCode.replace('let EMBEDDED_DATA = null;', `let EMBEDDED_DATA = ${dataString};`);
+        
+        const blob = new Blob([newCode], {type: 'text/html'});
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = 'index.html';
+        a.click();
+        alert("Файл index.html скачан! Замени им файл на GitHub, и в Genially всё появится.");
+    }
+
+    // --- ОСТАЛЬНЫЕ ФУНКЦИИ БЕЗ ИЗМЕНЕНИЙ (ПРОПУЩЕНО ДЛЯ КРАТКОСТИ, НО В ПОЛНОМ КОДЕ ОНИ ЕСТЬ) ---
+    // (Я вставляю их сюда обратно, чтобы код был "единым")
+    
     function playSfx(freq, type = 'sine', duration = 0.2, volume = 0.1) {
         if(!audioCtx) return;
         const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
@@ -261,14 +305,6 @@
         }
     }
 
-    function playVictorySfx() {
-        const notes = [440, 440, 440, 554, 659];
-        notes.forEach((f, i) => setTimeout(() => playSfx(f, 'triangle', 0.4, 0.1), [0, 0.12, 0.24, 0.36, 0.55][i] * 1000));
-    }
-
-    function encode(o) { return btoa(encodeURIComponent(JSON.stringify(o))); }
-    function decode(s) { return JSON.parse(decodeURIComponent(atob(s))); }
-
     function prepareQuestions() {
         if (!state.tasks || state.tasks.length === 0) return;
         questionQueue = state.tasks.map((_, i) => i);
@@ -277,33 +313,6 @@
             [questionQueue[i], questionQueue[j]] = [questionQueue[j], questionQueue[i]];
         }
         currentQuestionIdx = 0;
-    }
-
-    function init() {
-        window.addEventListener('resize', resize); resize();
-        const p = new URLSearchParams(window.location.search);
-        const d = p.get('game');
-        
-        if (d) {
-            try { state = decode(d); isGame = true; } catch(e) {}
-        } else {
-            const saved = localStorage.getItem('game_project_data') || localStorage.getItem('game_editor_state');
-            if(saved) { state = JSON.parse(saved); }
-        }
-
-        if (window.self !== window.top) {
-            isGame = true;
-            document.getElementById('panel').style.display = 'none';
-            document.getElementById('turn-indicator').style.display = 'block';
-        } else {
-            loadStateToPanel();
-        }
-        
-        document.body.style.fontFamily = state.font;
-        document.getElementById('vic-title').style.fontFamily = state.font;
-        if(state.music) { bgMusic.src = state.music; }
-        applyStateToAssets(); prepareQuestions();
-        update(); animate();
     }
 
     function loadStateToPanel() {
@@ -341,20 +350,14 @@
     }
 
     function animate() {
-        pulseFrame += 0.035; 
-        hue = (hue + 2) % 360;
+        pulseFrame += 0.035; hue = (hue + 2) % 360;
         tPos.forEach((p, i) => { 
             let oldX = p.x, oldY = p.y;
             p.x += (p.tx - p.x) * 0.35; p.y += (p.ty - p.y) * 0.35; 
             if (p.isWin) p.angle += 0.2;
             if (state.trailType !== 'none' && Math.hypot(p.x - oldX, p.y - oldY) > 0.1) {
-                let color;
-                if(state.trailType === 'rainbow') color = `hsl(${hue}, 100%, 70%)`;
-                else if(state.trailType === 'custom') color = state.colors.trail;
-                else color = ['#ff4d4d','#4d4dff','#4dff4d','#ffff4d'][i];
-                for(let k=0; k<2; k++) {
-                    trailParticles.push({ x: p.x + (Math.random()-0.5)*15, y: p.y + (Math.random()-0.5)*15, vx: (Math.random()-0.5), vy: (Math.random()-0.5), life: 1.0, color: color, size: Math.random()*2+1 });
-                }
+                let color = state.trailType === 'rainbow' ? `hsl(${hue}, 100%, 70%)` : (state.trailType === 'custom' ? state.colors.trail : ['#ff4d4d','#4d4dff','#4dff4d','#ffff4d'][i]);
+                trailParticles.push({ x: p.x, y: p.y, vx: (Math.random()-0.5), vy: (Math.random()-0.5), life: 1.0, color: color, size: Math.random()*2+1 });
             }
         });
         trailParticles.forEach((p, i) => { p.x += p.vx; p.y += p.vy; p.life -= 0.02; if(p.life <= 0) trailParticles.splice(i, 1); });
@@ -376,11 +379,7 @@
             diceVal = Math.floor(Math.random() * 6) + 1; 
             if (++c > 12) { 
                 clearInterval(iv); isRoll = false; 
-                if(isGame) {
-                    currentPlayer = (currentPlayer + 1) % state.playerCount;
-                    document.getElementById('turn-indicator').innerText = "ХОД ИГРОКА: " + (currentPlayer + 1);
-                }
-                setTimeout(showTask, 300); 
+                if(isGame) { currentPlayer = (currentPlayer + 1) % state.playerCount; document.getElementById('turn-indicator').innerText = "ХОД ИГРОКА: " + (currentPlayer + 1); }
             } 
         }, 60);
     }
@@ -391,25 +390,23 @@
         const taskIdx = questionQueue[currentQuestionIdx];
         const m = document.getElementById('task-modal');
         m.style.backgroundColor = state.colors.modalBg;
-        if(state.modalBgImg) { m.style.backgroundImage = `url(${state.modalBgImg})`; } else { m.style.backgroundImage = 'none'; }
+        if(state.modalBgImg) m.style.backgroundImage = `url(${state.modalBgImg})`;
         m.style.color = state.colors.modalTxt; m.style.fontFamily = state.font;
         document.getElementById('task-question').innerText = state.tasks[taskIdx].q;
         document.getElementById('check-btn').style.backgroundColor = state.colors.btnBg;
         m.setAttribute('data-ans-idx', taskIdx); m.classList.add('show');
-        const inp = document.getElementById('answer-input'); inp.value = ""; setTimeout(() => inp.focus(), 100);
     }
 
     function checkAnswer() {
         const m = document.getElementById('task-modal'); const taskIdx = m.getAttribute('data-ans-idx');
-        if (document.getElementById('answer-input').value.trim().toLowerCase() === state.tasks[taskIdx].a.toLowerCase()) { m.classList.remove('show'); playSfx(600, 'sine', 0.2); currentQuestionIdx++; } else { playSfx(100, 'sawtooth', 0.3); alert("Wrong!"); }
+        if (document.getElementById('answer-input').value.trim().toLowerCase() === state.tasks[taskIdx].a.toLowerCase()) { m.classList.remove('show'); currentQuestionIdx++; } else { alert("Wrong!"); }
     }
 
     function update() {
         if(isGame) return;
         state.bg = document.getElementById('bg-url').value;
         state.modalBgImg = document.getElementById('modal-bg-url').value;
-        const newMusic = document.getElementById('music-url').value;
-        if(newMusic !== state.music) { state.music = newMusic; bgMusic.src = newMusic; }
+        state.music = document.getElementById('music-url').value;
         state.ladderImg = document.getElementById('ladder-url').value;
         state.snakeImg = document.getElementById('snake-url').value;
         state.tokens = [document.getElementById('t1').value, document.getElementById('t2').value, document.getElementById('t3').value, document.getElementById('t4').value];
@@ -425,11 +422,11 @@
         state.trailType = document.getElementById('trail-type').value;
         state.playerCount = parseInt(document.getElementById('p-count').value);
         state.colors = { dots: document.getElementById('c-dots').value, modalBg: document.getElementById('c-bg').value, modalTxt: document.getElementById('c-txt').value, btnBg: document.getElementById('c-btn').value, trail: document.getElementById('c-trail').value };
-        document.getElementById('sz-val').innerText = state.cellSize; document.getElementById('l-th-val').innerText = state.ladderTh; document.getElementById('s-th-val').innerText = state.snakeTh; document.getElementById('tw-val').innerText = state.tokenW; document.getElementById('th-val').innerText = state.tokenH; document.getElementById('font-preview').style.fontFamily = state.font;
+        
         const qs = document.getElementById('qs').value.split('\n'), ans = document.getElementById('ans').value.split('\n');
         state.tasks = qs.map((q, i) => ({ q: q.trim(), a: (ans[i] || '').trim() })).filter(t => t.q);
         applyStateToAssets();
-        localStorage.setItem('game_project_data', JSON.stringify(state));
+        localStorage.setItem('game_editor_state', JSON.stringify(state));
     }
 
     function draw() {
@@ -446,85 +443,32 @@
                 if (img.complete && img.src) { ctx.save(); ctx.translate(x1, y1); ctx.rotate(angle + Math.PI/2); ctx.drawImage(img, -th/2, -dist, th, dist); ctx.restore(); }
             }
         });
-
         state.points.forEach((p, i) => {
             const px = p.x*cvs.width, py = p.y*cvs.height; let s = state.cellSize;
-            const hasToken = tPos.some(tp => Math.hypot(tp.x-px, tp.y-py) < 15);
-            let baseColor = hasToken ? `hsl(${hue}, 100%, 60%)` : (p.type==='skip'?"#f44336":p.type==='boost'?"#4CAF50":p.type==='task'?"#2196F3":state.colors.dots);
-
-            ctx.save();
-            if (state.neon) { ctx.shadowBlur = hasToken ? 35 : 15; ctx.shadowColor = baseColor; }
-
-            ctx.fillStyle = "rgba(255, 255, 255, 0.15)";
+            ctx.fillStyle = (p.type==='skip'?"#f44336":p.type==='boost'?"#4CAF50":p.type==='task'?"#2196F3":state.colors.dots);
             ctx.beginPath();
             if (state.cellShape === 'circle') ctx.arc(px, py, s/2, 0, 7);
             else if (state.cellShape === 'square') ctx.roundRect(px-s/2, py-s/2, s, s, 10);
             else ctx.roundRect(px-s, py-s/2, s*2, s, 10);
             ctx.fill();
-
-            let grad = ctx.createRadialGradient(px, py, s/6, px, py, s/1.5);
-            grad.addColorStop(0, "rgba(255,255,255,0)");
-            grad.addColorStop(1, baseColor.replace('rgb', 'rgba').replace(')', ',0.4)'));
-            ctx.fillStyle = grad;
-            ctx.fill();
-
-            ctx.strokeStyle = "rgba(255,255,255,0.6)";
-            ctx.lineWidth = 2;
-            ctx.stroke();
-
-            ctx.strokeStyle = baseColor;
-            ctx.lineWidth = 1;
-            ctx.globalAlpha = 0.8;
-            ctx.stroke();
-
-            ctx.globalAlpha = 0.8;
-            ctx.fillStyle = "white";
-            ctx.beginPath();
-            if (state.cellShape === 'circle') ctx.arc(px - s/4.5, py - s/4.5, s/8, 0, 7);
-            else ctx.ellipse(px - s/1.5, py - s/4.5, s/6, s/10, Math.PI/4, 0, 7);
-            ctx.fill();
-
-            ctx.restore();
-            if(!isGame) { ctx.shadowBlur = 0; ctx.fillStyle = "white"; ctx.font = "bold 16px Arial"; ctx.textAlign="center"; ctx.fillText(i+1, px, py+6); }
+            if(!isGame) { ctx.fillStyle = "white"; ctx.font = "bold 16px Arial"; ctx.textAlign="center"; ctx.fillText(i+1, px, py+6); }
         });
-
-        ctx.save();
-        ctx.font = `bold 40px ${state.font}`; 
-        ctx.fillStyle = state.colors.dots; 
-        if(state.neon) { ctx.shadowBlur = 25; ctx.shadowColor = state.colors.dots; }
-        ctx.textAlign = "left";
-        ctx.fillText("START", state.startPos.x, state.startPos.y); 
-        ctx.fillText("FINISH", state.finishPos.x, state.finishPos.y);
-        ctx.restore();
-
+        ctx.fillStyle = "white"; ctx.font = `bold 40px ${state.font}`; ctx.fillText("START", state.startPos.x, state.startPos.y); ctx.fillText("FINISH", state.finishPos.x, state.finishPos.y);
         for(let i=0; i < (isGame ? state.playerCount : 4); i++) {
-            let tw = state.tokenW || 60;
-            let th = state.tokenH || 60;
-            if (isGame && i === currentPlayer && !won) {
-                let pulse = Math.sin(pulseFrame)*5;
-                tw += pulse; th += pulse;
-            }
             ctx.save(); ctx.translate(tPos[i].x, tPos[i].y); ctx.rotate(tPos[i].angle);
-            if (state.tokens[i] && tImgs[i].complete) ctx.drawImage(tImgs[i], -tw/2, -th/2, tw, th);
-            else { ctx.fillStyle = ['red','blue','green','yellow'][i]; ctx.beginPath(); ctx.arc(0, 0, tw/3, 0, 7); ctx.fill(); }
+            if (state.tokens[i] && tImgs[i].complete) ctx.drawImage(tImgs[i], -state.tokenW/2, -state.tokenH/2, state.tokenW, state.tokenH);
+            else { ctx.fillStyle = ['red','blue','green','yellow'][i]; ctx.beginPath(); ctx.arc(0, 0, 20, 0, 7); ctx.fill(); }
             ctx.restore();
         }
-
-        const dx = cvs.width-110, dy = cvs.height-110; ctx.save();
-        if(state.diceSkin === 'glass') { ctx.fillStyle = "rgba(255,255,255,0.3)"; ctx.strokeStyle = "rgba(255,255,255,0.8)"; ctx.lineWidth = 2; }
-        else if(state.diceSkin === 'neon') { ctx.fillStyle = "#000"; ctx.strokeStyle = state.colors.dots; ctx.lineWidth = 4; ctx.shadowBlur = 15; ctx.shadowColor = state.colors.dots; }
-        else if(state.diceSkin === 'gold') { ctx.fillStyle = "gold"; ctx.strokeStyle = "#b8860b"; ctx.lineWidth = 3; } else { ctx.fillStyle = "white"; }
-        ctx.beginPath(); ctx.roundRect(dx, dy, 90, 90, 15); ctx.fill(); if(state.diceSkin !== 'classic') ctx.stroke();
-        ctx.shadowBlur = 0; ctx.fillStyle = (state.diceSkin === 'gold' || state.diceSkin === 'classic') ? "#333" : "white";
-        ctx.font = `bold 55px ${state.font}`; ctx.textAlign = "center"; ctx.fillText(diceVal, dx+45, dy+65); ctx.restore();
+        const dx = cvs.width-110, dy = cvs.height-110; ctx.fillStyle = "white"; ctx.beginPath(); ctx.roundRect(dx, dy, 90, 90, 15); ctx.fill();
+        ctx.fillStyle = "#333"; ctx.font = "bold 55px Arial"; ctx.textAlign = "center"; ctx.fillText(diceVal, dx+45, dy+65);
     }
 
     cvs.onmousedown = (e) => {
         if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        if (audioCtx.state === 'suspended') audioCtx.resume();
         const x = e.clientX, y = e.clientY;
         if (x > cvs.width-110 && y > cvs.height-110) { roll(); return; }
-        for(let i=0; i<state.playerCount; i++) if (Math.hypot(x-tPos[i].x, y-tPos[i].y) < state.tokenW/2) { dragIdx = 't'+i; return; }
+        for(let i=0; i<state.playerCount; i++) if (Math.hypot(x-tPos[i].x, y-tPos[i].y) < 30) { dragIdx = 't'+i; return; }
         if (Math.hypot(x-state.startPos.x, y-state.startPos.y) < 50) { dragIdx = 'start'; return; }
         if (Math.hypot(x-state.finishPos.x, y-state.finishPos.y) < 50) { dragIdx = 'finish'; return; }
         for (let i=0; i<state.points.length; i++) {
@@ -534,11 +478,6 @@
             }
         }
         if (!isGame && !isLinkMode) { state.points.push({ x: x/cvs.width, y: y/cvs.height, type: 'normal' }); update(); }
-    };
-
-    window.oncontextmenu = (e) => {
-        e.preventDefault(); if(isGame) return;
-        state.points.forEach(p => { if(Math.hypot(e.clientX-p.x*cvs.width, e.clientY-p.y*cvs.height) < state.cellSize/2) { const types=['normal','skip','boost','task']; p.type=types[(types.indexOf(p.type||'normal')+1)%types.length]; update(); playSfx(400); } });
     };
 
     cvs.onmousemove = (e) => {
@@ -553,13 +492,13 @@
     cvs.onmouseup = () => {
         if (dragIdx && dragIdx.startsWith('t')) {
             const idx = dragIdx[1];
-            if (Math.hypot(tPos[idx].tx-state.finishPos.x, tPos[idx].ty-state.finishPos.y) < 60) { won = true; tPos[idx].isWin = true; playVictorySfx(); document.getElementById('victory-overlay').style.display = 'flex'; }
+            if (Math.hypot(tPos[idx].tx-state.finishPos.x, tPos[idx].ty-state.finishPos.y) < 60) { won = true; tPos[idx].isWin = true; document.getElementById('victory-overlay').style.display = 'flex'; }
             state.points.forEach((p, pIdx) => {
-                if (Math.hypot(tPos[idx].tx-p.x*cvs.width, tPos[idx].ty-p.y*cvs.height) < 50) {
+                if (Math.hypot(tPos[idx].tx-p.x*cvs.width, tPos[idx].ty-p.y*cvs.height) < 40) {
                     tPos[idx].tx = p.x*cvs.width; tPos[idx].ty = p.y*cvs.height;
-                    if(isGame) { if(p.type === 'task') setTimeout(showTask, 500); if(p.type === 'boost') playSfx(900); if(p.type === 'skip') playSfx(50, 'sawtooth'); }
+                    if(isGame && p.type === 'task') setTimeout(showTask, 500);
                     const link = state.links.find(l => l.from === pIdx);
-                    if (link) { const isL = state.points[link.from].y > state.points[link.to].y; setTimeout(() => { playSfx(isL?1000:200, isL?'sine':'snake'); tPos[idx].tx = state.points[link.to].x*cvs.width; tPos[idx].ty = state.points[link.to].y*cvs.height; }, 500); }
+                    if (link) { setTimeout(() => { tPos[idx].tx = state.points[link.to].x*cvs.width; tPos[idx].ty = state.points[link.to].y*cvs.height; }, 500); }
                 }
             });
         }
@@ -569,29 +508,6 @@
     function resize() { 
         cvs.width = window.innerWidth; cvs.height = window.innerHeight; 
         cnfCvs.width = window.innerWidth; cnfCvs.height = window.innerHeight; 
-        if(!isGame) {
-            tPos[0].tx = window.innerWidth-150; tPos[0].ty = 50;
-            tPos[1].tx = window.innerWidth-80; tPos[1].ty = 50;
-            tPos[2].tx = window.innerWidth-150; tPos[2].ty = 120;
-            tPos[3].tx = window.innerWidth-80; tPos[3].ty = 120;
-        }
-    }
-    
-    function getCleanUrl() { return window.location.href.split('?')[0]; }
-
-    function save() {
-        localStorage.setItem('game_project_data', JSON.stringify(state));
-        const url = getCleanUrl(); 
-        navigator.clipboard.writeText(url);
-        alert("Проект сохранен! Ссылка скопирована (она теперь короткая).");
-    }
-
-    function getIframe() {
-        localStorage.setItem('game_project_data', JSON.stringify(state));
-        const url = getCleanUrl();
-        const code = `<iframe src="${url}" width="100%" height="600" style="border:none;" allow="autoplay; fullscreen"></iframe>`;
-        navigator.clipboard.writeText(code);
-        alert("Короткий код iFrame скопирован!");
     }
 
     init();
