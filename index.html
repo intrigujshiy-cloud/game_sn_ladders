@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3D Planet Game: Super Editor No-Memory</title>
+    <title>3D Planet Game: Glass Bubble Editor</title>
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Comfortaa:wght@700&family=Bungee&family=Kelly+Slab&family=Monoton&family=Pacifico&family=Ruslan+Display&display=swap" rel="stylesheet">
     <style>
         body { margin: 0; overflow: hidden; font-family: sans-serif; background: #1a1a1a; }
@@ -62,7 +62,7 @@
 <div id="turn-indicator">ХОД ИГРОКА: 1</div>
 
 <div id="panel">
-    <h3 style="margin:0 0 10px 0; color: #4CAF50;">Конструктор</h3>
+    <h3 style="margin:0 0 10px 0; color: #4CAF50;">Конструктор (No-Memory)</h3>
     
     <div class="input-wrap"><input type="text" id="bg-url" placeholder="Ссылка на ФОН ИГРЫ" oninput="update()"><button class="clear-btn" onclick="clearInp('bg-url')">×</button></div>
     <div class="input-wrap"><input type="text" id="modal-bg-url" placeholder="Ссылка на ФОН ОКНА (URL)" oninput="update()"><button class="clear-btn" onclick="clearInp('modal-bg-url')">×</button></div>
@@ -141,9 +141,9 @@
     </div>
 
     <select id="cell-shape" onchange="update()" style="margin-bottom: 8px;">
-        <option value="circle">Круг</option>
-        <option value="square">Квадрат</option>
-        <option value="rect">Прямоугольник</option>
+        <option value="circle">Круг (Стекло)</option>
+        <option value="square">Квадрат (Стекло)</option>
+        <option value="rect">Прямоугольник (Стекло)</option>
     </select>
 
     <div class="neon-row">
@@ -194,17 +194,22 @@
         cellSize: 60, ladderTh: 60, snakeTh: 60, tasks: [], playerCount: 4,
         colors: { dots: '#ffffff', modalBg: '#fff9e6', modalTxt: '#333333', btnBg: '#4CAF50', trail: '#ffffff' }, 
         neon: true, randQ: true, cellShape: 'circle', font: 'Arial', diceSkin: 'classic',
-        trailType: 'match', startPos: {x:100, y:150}, finishPos: {x:100, y:250}, links: []
+        trailType: 'match', startPos: {x:400, y:150}, finishPos: {x:400, y:250}, links: []
     };
 
     const bgImg = new Image();
     const tImgs = [new Image(), new Image(), new Image(), new Image()];
     const ladderImgObj = new Image();
     const snakeImgObj = new Image();
+    
+    // ПРАВКА 2: Фишки появляются вверху справа (чтобы не закрывал конструктор)
     let tPos = [
-        {x:50,y:50,tx:50,ty:50, angle:0, isWin:false}, {x:120,y:50,tx:120,ty:50, angle:0, isWin:false}, 
-        {x:50,y:120,tx:50,ty:120, angle:0, isWin:false}, {x:120,y:120,tx:120,ty:120, angle:0, isWin:false}
+        {x:window.innerWidth-150,y:50,tx:window.innerWidth-150,ty:50, angle:0, isWin:false}, 
+        {x:window.innerWidth-80,y:50,tx:window.innerWidth-80,ty:50, angle:0, isWin:false}, 
+        {x:window.innerWidth-150,y:120,tx:window.innerWidth-150,ty:120, angle:0, isWin:false}, 
+        {x:window.innerWidth-80,y:120,tx:window.innerWidth-80,ty:120, angle:0, isWin:false}
     ];
+
     let dragIdx = null, isGame = false, diceVal = "?", isRoll = false, won = false;
     let linkFrom = null, isLinkMode = false, particles = [], trailParticles = [], questionQueue = [], currentQuestionIdx = 0;
     let pulseFrame = 0, hue = 0, currentPlayer = 0;
@@ -215,7 +220,6 @@
         if(!audioCtx) return;
         const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
         osc.type = type; osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
-        if(type === 'snake') { osc.type = 'sawtooth'; osc.frequency.exponentialRampToValueAtTime(40, audioCtx.currentTime + duration); }
         gain.gain.setValueAtTime(volume, audioCtx.currentTime);
         gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + duration);
         osc.connect(gain); gain.connect(audioCtx.destination);
@@ -308,6 +312,43 @@
         requestAnimationFrame(animate);
     }
 
+    // ПРАВКА 3: Отрисовка "Стеклянных пузырей"
+    function drawGlassCell(ctx, x, y, w, h, shape, color, isTokenOn) {
+        ctx.save();
+        ctx.translate(x, y);
+        
+        // Основной градиент пузыря
+        let grad = ctx.createRadialGradient(-w*0.1, -h*0.1, 0, 0, 0, w*0.8);
+        let baseColor = isTokenOn ? `hsl(${hue}, 100%, 60%)` : color;
+        
+        // Превращаем HEX в RGBA для прозрачности
+        ctx.globalAlpha = 0.4;
+        ctx.fillStyle = baseColor;
+        
+        ctx.beginPath();
+        if (shape === 'circle') ctx.arc(0, 0, w/2, 0, Math.PI*2);
+        else if (shape === 'square') ctx.rect(-w/2, -h/2, w, h);
+        else ctx.rect(-w, -h/2, w*2, h);
+        ctx.fill();
+
+        // Контур (Свечение)
+        ctx.globalAlpha = 1.0;
+        ctx.strokeStyle = baseColor;
+        ctx.lineWidth = isTokenOn ? 5 : 3;
+        if (state.neon) { ctx.shadowBlur = 15; ctx.shadowColor = baseColor; }
+        ctx.stroke();
+
+        // Блик (Стекло)
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = "rgba(255,255,255,0.6)";
+        ctx.beginPath();
+        if (shape === 'circle') ctx.arc(-w*0.15, -h*0.15, w*0.1, 0, Math.PI*2);
+        else ctx.arc(-w*0.3, -h*0.2, w*0.08, 0, Math.PI*2);
+        ctx.fill();
+
+        ctx.restore();
+    }
+
     function toggleLinkMode() { isLinkMode = !isLinkMode; linkFrom = null; document.getElementById('link-btn').style.background = isLinkMode ? "#e91e63" : "#9c27b0"; }
 
     function roll() {
@@ -378,6 +419,7 @@
         if (bgImg.src && bgImg.complete) ctx.drawImage(bgImg, 0, 0, cvs.width, cvs.height);
         trailParticles.forEach(p => { ctx.globalAlpha = p.life; ctx.fillStyle = p.color; ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, 7); ctx.fill(); });
         ctx.globalAlpha = 1.0;
+        
         state.links.forEach(link => {
             const f = state.points[link.from], t = state.points[link.to];
             if (f && t) {
@@ -387,21 +429,27 @@
                 if (img.complete && img.src) { ctx.save(); ctx.translate(x1, y1); ctx.rotate(angle + Math.PI/2); ctx.drawImage(img, -th/2, -dist, th, dist); ctx.restore(); }
             }
         });
+
         state.points.forEach((p, i) => {
             const px = p.x*cvs.width, py = p.y*cvs.height; let s = state.cellSize;
             const hasToken = tPos.some(tp => Math.hypot(tp.x-px, tp.y-py) < 15);
-            ctx.beginPath(); 
-            if (state.neon) { ctx.shadowBlur = hasToken ? 25 : 15; ctx.shadowColor = hasToken ? `hsl(${hue}, 100%, 70%)` : state.colors.dots; }
-            ctx.strokeStyle = hasToken ? `hsl(${hue}, 100%, 60%)` : ((linkFrom === i) ? "#e91e63" : (p.type==='skip'?"#f44336":p.type==='boost'?"#4CAF50":p.type==='task'?"#2196F3":state.colors.dots));
-            ctx.lineWidth = hasToken ? 6 : 4; 
-            if (state.cellShape === 'circle') ctx.arc(px, py, s/2, 0, 7); 
-            else if (state.cellShape === 'square') ctx.rect(px-s/2, py-s/2, s, s); 
-            else ctx.rect(px-s, py-s/2, s*2, s);
-            ctx.stroke(); 
-            if(!isGame) { ctx.shadowBlur = 0; ctx.fillStyle = "white"; ctx.font = "14px Arial"; ctx.fillText(i+1, px-5, py+5); }
+            
+            // ПРАВКА 3 (продолжение): Используем новую функцию отрисовки
+            let dotColor = (linkFrom === i) ? "#e91e63" : (p.type==='skip'?"#f44336":p.type==='boost'?"#4CAF50":p.type==='task'?"#2196F3":state.colors.dots);
+            drawGlassCell(ctx, px, py, s, s, state.cellShape, dotColor, hasToken);
+            
+            if(!isGame) { ctx.fillStyle = "white"; ctx.font = "14px Arial"; ctx.textAlign="center"; ctx.fillText(i+1, px, py+5); }
         });
-        ctx.font = `bold 20px ${state.font}`; ctx.fillStyle = "gold"; ctx.shadowBlur = 0; ctx.textAlign = "left";
-        ctx.fillText("START", state.startPos.x, state.startPos.y); ctx.fillText("FINISH", state.finishPos.x, state.finishPos.y);
+
+        // ПРАВКА 1: Старт и Финиш в 2 раза больше, жирные, и цвет зависит от Dots Color
+        ctx.font = `bold 40px ${state.font}`; 
+        ctx.fillStyle = state.colors.dots; 
+        ctx.shadowBlur = 10; ctx.shadowColor = state.colors.dots;
+        ctx.textAlign = "left";
+        ctx.fillText("START", state.startPos.x, state.startPos.y); 
+        ctx.fillText("FINISH", state.finishPos.x, state.finishPos.y);
+        ctx.shadowBlur = 0;
+
         for(let i=0; i < (isGame ? state.playerCount : 4); i++) {
             let s = state.cellSize; if (isGame && i === currentPlayer && !won) s += Math.sin(pulseFrame)*8;
             ctx.save(); ctx.translate(tPos[i].x, tPos[i].y); ctx.rotate(tPos[i].angle);
@@ -409,6 +457,7 @@
             else { ctx.fillStyle = ['red','blue','green','yellow'][i]; ctx.beginPath(); ctx.arc(0, 0, s/3, 0, 7); ctx.fill(); }
             ctx.restore();
         }
+        
         const dx = cvs.width-110, dy = cvs.height-110; ctx.save();
         if(state.diceSkin === 'glass') { ctx.fillStyle = "rgba(255,255,255,0.3)"; ctx.strokeStyle = "rgba(255,255,255,0.8)"; ctx.lineWidth = 2; }
         else if(state.diceSkin === 'neon') { ctx.fillStyle = "#000"; ctx.strokeStyle = state.colors.dots; ctx.lineWidth = 4; ctx.shadowBlur = 15; ctx.shadowColor = state.colors.dots; }
@@ -424,8 +473,8 @@
         const x = e.clientX, y = e.clientY;
         if (x > cvs.width-110 && y > cvs.height-110) { roll(); return; }
         for(let i=0; i<state.playerCount; i++) if (Math.hypot(x-tPos[i].x, y-tPos[i].y) < state.cellSize/2) { dragIdx = 't'+i; return; }
-        if (Math.hypot(x-state.startPos.x, y-state.startPos.y) < 50) { dragIdx = 'start'; return; }
-        if (Math.hypot(x-state.finishPos.x, y-state.finishPos.y) < 50) { dragIdx = 'finish'; return; }
+        if (Math.hypot(x-state.startPos.x+50, y-state.startPos.y+20) < 80) { dragIdx = 'start'; return; }
+        if (Math.hypot(x-state.finishPos.x+50, y-state.finishPos.y+20) < 80) { dragIdx = 'finish'; return; }
         for (let i=0; i<state.points.length; i++) {
             if (Math.hypot(x-state.points[i].x*cvs.width, y-state.points[i].y*cvs.height) < state.cellSize/2) {
                 if (isLinkMode) { if (linkFrom === null) linkFrom = i;
@@ -453,7 +502,7 @@
     cvs.onmouseup = () => {
         if (dragIdx && dragIdx.startsWith('t')) {
             const idx = dragIdx[1];
-            if (Math.hypot(tPos[idx].tx-state.finishPos.x, tPos[idx].ty-state.finishPos.y) < 60) { won = true; tPos[idx].isWin = true; playVictorySfx(); document.getElementById('victory-overlay').style.display = 'flex'; }
+            if (Math.hypot(tPos[idx].tx-state.finishPos.x, tPos[idx].ty-state.finishPos.y) < 80) { won = true; tPos[idx].isWin = true; playVictorySfx(); document.getElementById('victory-overlay').style.display = 'flex'; }
             state.points.forEach((p, pIdx) => {
                 if (Math.hypot(tPos[idx].tx-p.x*cvs.width, tPos[idx].ty-p.y*cvs.height) < 50) {
                     tPos[idx].tx = p.x*cvs.width; tPos[idx].ty = p.y*cvs.height;
@@ -468,7 +517,7 @@
 
     function resize() { cvs.width = window.innerWidth; cvs.height = window.innerHeight; cnfCvs.width = window.innerWidth; cnfCvs.height = window.innerHeight; }
     function save() { navigator.clipboard.writeText(window.location.href.split('?')[0] + "?game=" + encode(state)); alert("URL Ссылка скопирована!"); }
-    function getIframe() { const url = window.location.href.split('?')[0] + "?game=" + encode(state); const code = `<iframe src="${url}" width="100%" height="600" style="border:none;" allow="autoplay; fullscreen"></iframe>`; navigator.clipboard.writeText(code); alert("Код iFrame скопирован!"); }
+    function getIframe() { const url = window.location.href.split('?')[0] + "?game=" + encode(state); const code = `<iframe src="${url}" width="100%" height="600" style="border:none;" allow="autoplay; fullscreen"></iframe>`; navigator.clipboard.writeText(code); alert("Код iFrame скопирована!"); }
     
     init();
 </script>
