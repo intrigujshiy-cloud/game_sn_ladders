@@ -359,7 +359,7 @@
             if (++c > 12) { 
                 clearInterval(iv); 
                 isRoll = false; 
-                if(isGame) { 
+                if(isGame || state.tasks.length > 0) { 
                     currentPlayer = (currentPlayer + 1) % state.playerCount; 
                     document.getElementById('turn-indicator').innerText = "ХОД ИГРОКА: " + (currentPlayer + 1); 
                     setTimeout(showTask, 400); 
@@ -483,7 +483,6 @@
             ctx.restore();
         });
 
-        // Рисуем надписи START и FINISH
         state.labels.forEach(l => {
             ctx.save();
             ctx.fillStyle = "gold";
@@ -510,7 +509,6 @@
         if (x > cvs.width-120 && y > cvs.height-120) { roll(); return; }
         for(let i=0; i<state.playerCount; i++) { if (Math.hypot(x-tPos[i].x, y-tPos[i].y) < 30) { dragIdx = i; return; } }
         if (!isGame) {
-            // Проверка перетаскивания надписей
             for(let i=0; i<state.labels.length; i++) {
                 if (Math.hypot(x - state.labels[i].x*cvs.width, y - state.labels[i].y*cvs.height) < 40) { labelDragIdx = i; return; }
             }
@@ -552,15 +550,15 @@
         }
         dragIdx = null; labelDragIdx = null; update();
     };
-
+    
     function resize() { cvs.width = window.innerWidth; cvs.height = window.innerHeight; cnfCvs.width = window.innerWidth; cnfCvs.height = window.innerHeight; }
     
     function save() { 
-        update(); 
+        update();
         const s = JSON.parse(JSON.stringify(state)); 
         s.tasks = []; 
         const url = window.location.origin + window.location.pathname + "?game=" + encode(s);
-        navigator.clipboard.writeText(url); alert("Ссылка для 50+ кружков скопирована!"); 
+        navigator.clipboard.writeText(url); alert("Ссылка скопирована!"); 
     }
     
     function getIframe() { const url = window.location.origin + window.location.pathname + "?game=" + encode(state); const code = `<iframe src="${url}" width="100%" height="600px" frameborder="0"></iframe>`; navigator.clipboard.writeText(code); alert("Код iFrame скопирован!"); }
