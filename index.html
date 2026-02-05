@@ -387,19 +387,79 @@
                 if (img.complete && img.src) { ctx.save(); ctx.translate(x1, y1); ctx.rotate(angle + Math.PI/2); ctx.drawImage(img, -th/2, -dist, th, dist); ctx.restore(); }
             }
         });
-        state.points.forEach((p, i) => {
-            const px = p.x*cvs.width, py = p.y*cvs.height; let s = state.cellSize;
-            const hasToken = tPos.some(tp => Math.hypot(tp.x-px, tp.y-py) < 15);
-            ctx.beginPath(); 
-            if (state.neon) { ctx.shadowBlur = hasToken ? 25 : 15; ctx.shadowColor = hasToken ? `hsl(${hue}, 100%, 70%)` : state.colors.dots; }
-            ctx.strokeStyle = hasToken ? `hsl(${hue}, 100%, 60%)` : ((linkFrom === i) ? "#e91e63" : (p.type==='skip'?"#f44336":p.type==='boost'?"#4CAF50":p.type==='task'?"#2196F3":state.colors.dots));
-            ctx.lineWidth = hasToken ? 6 : 4; 
-            if (state.cellShape === 'circle') ctx.arc(px, py, s/2, 0, 7); 
-            else if (state.cellShape === 'square') ctx.rect(px-s/2, py-s/2, s, s); 
-            else ctx.rect(px-s, py-s/2, s*2, s);
-            ctx.stroke(); 
-            if(!isGame) { ctx.shadowBlur = 0; ctx.fillStyle = "white"; ctx.font = "14px Arial"; ctx.fillText(i+1, px-5, py+5); }
-        });
+      state.points.forEach((p, i) => {
+    const px = p.x * cvs.width;
+    const py = p.y * cvs.height;
+    const s = state.cellSize;
+
+    const hasToken = tPos.some(tp => Math.hypot(tp.x - px, tp.y - py) < 15);
+
+    const baseColor = hasToken
+        ? `hsl(${hue}, 100%, 60%)`
+        : (linkFrom === i ? "#e91e63"
+        : p.type === 'skip'  ? "#f44336"
+        : p.type === 'boost' ? "#4CAF50"
+        : p.type === 'task'  ? "#2196F3"
+        : state.colors.dots);
+
+    ctx.save();
+
+    // ✨ НЕОНОВОЕ СВЕЧЕНИЕ
+    if (state.neon) {
+        ctx.shadowBlur = hasToken ? 35 : 15;
+        ctx.shadowColor = baseColor;
+    }
+
+    // 1️⃣ Стеклянное тело
+    ctx.fillStyle = "rgba(255,255,255,0.15)";
+    ctx.beginPath();
+    if (state.cellShape === 'circle')
+        ctx.arc(px, py, s / 2, 0, Math.PI * 2);
+    else if (state.cellShape === 'square')
+        ctx.roundRect(px - s / 2, py - s / 2, s, s, 10);
+    else
+        ctx.roundRect(px - s, py - s / 2, s * 2, s, 10);
+    ctx.fill();
+
+    // 2️⃣ Внутреннее свечение
+    const grad = ctx.createRadialGradient(px, py, s / 6, px, py, s / 1.4);
+    grad.addColorStop(0, "rgba(255,255,255,0)");
+    grad.addColorStop(1, baseColor.replace('rgb', 'rgba').replace(')', ',0.4)'));
+    ctx.fillStyle = grad;
+    ctx.fill();
+
+    // 3️⃣ Стеклянный контур
+    ctx.strokeStyle = "rgba(255,255,255,0.6)";
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // 4️⃣ Цветной обод
+    ctx.strokeStyle = baseColor;
+    ctx.lineWidth = 1;
+    ctx.globalAlpha = 0.9;
+    ctx.stroke();
+
+    // 5️⃣ Блик
+    ctx.globalAlpha = 0.8;
+    ctx.fillStyle = "white";
+    ctx.beginPath();
+    if (state.cellShape === 'circle')
+        ctx.arc(px - s / 4.5, py - s / 4.5, s / 8, 0, Math.PI * 2);
+    else
+        ctx.ellipse(px - s / 1.5, py - s / 4.5, s / 6, s / 10, Math.PI / 4, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.restore();
+
+    // 🔢 Номер клетки (только в редакторе)
+    if (!isGame) {
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = "white";
+        ctx.font = "14px Arial";
+        ctx.textAlign = "center";
+        ctx.fillText(i + 1, px, py + 5);
+    }
+});
         ctx.font = `bold 20px ${state.font}`; ctx.fillStyle = "gold"; ctx.shadowBlur = 0; ctx.textAlign = "left";
         ctx.fillText("START", state.startPos.x, state.startPos.y); ctx.fillText("FINISH", state.finishPos.x, state.finishPos.y);
         for(let i=0; i < (isGame ? state.playerCount : 4); i++) {
