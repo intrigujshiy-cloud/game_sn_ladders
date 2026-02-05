@@ -316,7 +316,7 @@
         if (state.snakeImg && state.snakeImg.trim() !== '') snakeImgObj.src = state.snakeImg;
         state.tokens.forEach((url, i) => { 
             if(url && url.trim() !== '') tImgs[i].src = url; 
-            else tImgs[i].src = ''; // Сбрасываем, если пусто
+            else tImgs[i].src = ''; 
         });
     }
 
