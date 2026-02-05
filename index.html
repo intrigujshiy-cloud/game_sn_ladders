@@ -29,17 +29,7 @@
         .clear-btn:hover { color: #f44336; }
         .tasks-row { display: flex; gap: 10px; margin-bottom: 10px; }
         .tasks-row div { flex: 1; }
-        
-        /* ИЗМЕНЕНО: Настройки полей для длинных текстов */
-        .tasks-row textarea { 
-            height: 150px; /* Увеличена начальная высота */
-            resize: vertical; /* Разрешено растягивать вниз */
-            min-height: 80px;
-            padding: 8px;
-            line-height: 1.4;
-            overflow-y: auto; /* Появится скролл, если текста много */
-        }
-        
+        .tasks-row textarea { height: 80px; resize: none; }
         .colors-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
         .colors-grid label { font-size: 10px; display: flex; flex-direction: column; }
         input, textarea, select { width: 100%; background: #222; color: white; border: 1px solid #555; padding: 5px 25px 5px 5px; box-sizing: border-box; border-radius: 4px; }
@@ -144,8 +134,8 @@
     <div class="input-wrap"><input type="text" id="snake-url" placeholder="URL Змеи" oninput="update()"><button class="clear-btn" onclick="clearInp('snake-url')">×</button></div>
 
     <div class="tasks-row">
-        <div><label style="font-size:10px">ВОПРОСЫ (Каждый с новой строки)</label><textarea id="qs" oninput="update()" placeholder="Вставь сюда свои вопросы..."></textarea></div>
-        <div><label style="font-size:10px">ОТВЕТЫ (Каждый с новой строки)</label><textarea id="ans" oninput="update()" placeholder="Вставь сюда ответы..."></textarea></div>
+        <div><label style="font-size:10px">ВОПРОСЫ / URL ТАБЛИЦЫ</label><textarea id="qs" oninput="update()"></textarea></div>
+        <div><label style="font-size:10px">ОТВЕТЫ</label><textarea id="ans" oninput="update()"></textarea></div>
     </div>
 
     <div class="size-settings">
@@ -280,6 +270,19 @@
     function encode(o) { return btoa(encodeURIComponent(JSON.stringify(o))); }
     function decode(s) { return JSON.parse(decodeURIComponent(atob(s))); }
 
+    async function loadFromSheet(url) {
+        try {
+            const response = await fetch(url);
+            const data = await response.text();
+            const rows = data.split('\n').filter(r => r.trim());
+            state.tasks = rows.map(row => {
+                const cols = row.split(',');
+                return { q: cols[0]?.trim() || '', a: cols[1]?.trim() || '' };
+            }).filter(t => t.q);
+            prepareQuestions();
+        } catch (e) { console.error("Ошибка загрузки таблицы", e); }
+    }
+
     function prepareQuestions() {
         if (!state.tasks || state.tasks.length === 0) return;
         questionQueue = state.tasks.map((_, i) => i);
@@ -378,12 +381,20 @@
         state.diceSkin = document.getElementById('dice-skin').value;
         state.trailType = document.getElementById('trail-type').value;
         state.playerCount = parseInt(document.getElementById('p-count').value);
-        state.colors = { dots: document.getElementById('c-dots').value, modalBg: document.getElementById('c-bg').value, modalTxt: document.getElementById('c-txt').value, btnBg: document.getElementById('c-btn').value, trail: document.getElementById('c-trail').value };
+        state.colors = { dots: document.getElementById('c-dots').value, modalBg: '#fff9e6', modalTxt: '#333333', btnBg: '#4CAF50', trail: document.getElementById('c-trail').value };
+        
+        // Логика переключения между Текстом и Таблицей
+        const qVal = document.getElementById('qs').value.trim();
+        if (qVal.startsWith('http')) {
+            loadFromSheet(qVal);
+        } else {
+            const qs = qVal.split('\n'), ans = document.getElementById('ans').value.split('\n');
+            state.tasks = qs.map((q, i) => ({ q: q.trim(), a: (ans[i] || '').trim() })).filter(t => t.q);
+        }
+
         document.getElementById('sz-val').innerText = state.cellSize; document.getElementById('l-th-val').innerText = state.ladderTh; document.getElementById('s-th-val').innerText = state.snakeTh;
         document.getElementById('tw-val').innerText = state.tokenW; document.getElementById('th-val').innerText = state.tokenH;
         document.getElementById('font-preview').style.fontFamily = state.font;
-        const qs = document.getElementById('qs').value.split('\n'), ans = document.getElementById('ans').value.split('\n');
-        state.tasks = qs.map((q, i) => ({ q: q.trim(), a: (ans[i] || '').trim() })).filter(t => t.q);
         applyStateToAssets();
     }
 
