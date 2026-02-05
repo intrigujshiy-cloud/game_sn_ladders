@@ -213,6 +213,7 @@
         colors: { dots: '#ffffff', modalBg: '#fff9e6', modalTxt: '#333333', btnBg: '#4CAF50', trail: '#ffffff' }, 
         neon: true, randQ: true, cellShape: 'circle', font: 'Arial', diceSkin: 'classic',
         trailType: 'match', links: [], sheetUrl: '',
+        // Новое: храним позиции надписей
         labels: [{t:'START', x:0.85, y:0.85}, {t:'FINISH', x:0.92, y:0.85}]
     };
     
@@ -231,7 +232,7 @@
     let pulseFrame = 0, hue = 0, currentPlayer = 0;
 
     async function loadFromSheet(url) {
-        if (!url || !url.includes('google.com')) return;
+        if (!url) return;
         let fetchUrl = url.replace('/edit?usp=sharing', '/export?format=csv').replace('/edit#gid=', '/export?format=csv&gid=');
         try {
             const response = await fetch(fetchUrl);
@@ -247,11 +248,12 @@
                     state.tasks.push({ q, a });
                 }
             });
+            // Обновляем поля ввода текстом из таблицы
             document.getElementById('qs').value = qsArr.join('\n');
             document.getElementById('ans').value = ansArr.join('\n');
             state.sheetUrl = url;
-            update(); // Принудительно обновляем состояние
-            prepareQuestions(); // Перемешиваем новые вопросы
+            update();
+            prepareQuestions();
         } catch (e) { console.error("Sheet error", e); }
     }
 
@@ -289,11 +291,9 @@
     function prepareQuestions() {
         if (!state.tasks || state.tasks.length === 0) return;
         questionQueue = state.tasks.map((_, i) => i);
-        if(state.randQ) {
-            for (let i = questionQueue.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
-                [questionQueue[i], questionQueue[j]] = [questionQueue[j], questionQueue[i]];
-            }
+        for (let i = questionQueue.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [questionQueue[i], questionQueue[j]] = [questionQueue[j], questionQueue[i]];
         }
         currentQuestionIdx = 0;
     }
@@ -354,12 +354,6 @@
 
     function roll() {
         if (isRoll || won) return;
-        // Перед броском убеждаемся, что список заданий актуален (если вводили вручную)
-        update(); 
-        if (state.tasks.length === 0 && (isGame || document.getElementById('qs').value.trim() !== "")) {
-             update(); 
-        }
-
         isRoll = true; playDiceSound(); if(bgMusic.paused && state.music) bgMusic.play().catch(()=>{});
         let c = 0;
         const iv = setInterval(() => { 
@@ -367,11 +361,10 @@
             if (++c > 12) { 
                 clearInterval(iv); 
                 isRoll = false; 
-                
-                if(isGame || state.tasks.length > 0) { 
+                if(isGame) { 
+                    currentPlayer = (currentPlayer + 1) % state.playerCount; 
                     document.getElementById('turn-indicator').innerText = "ХОД ИГРОКА: " + (currentPlayer + 1); 
                     setTimeout(showTask, 400); 
-                    currentPlayer = (currentPlayer + 1) % state.playerCount; 
                 } 
             } 
         }, 60);
@@ -398,6 +391,7 @@
     }
 
     function update() {
+        if(isGame) return;
         state.sheetUrl = document.getElementById('sheet-url').value;
         state.bg = document.getElementById('bg-url').value;
         state.modalBgImg = document.getElementById('modal-bg-url').value;
@@ -424,16 +418,8 @@
         document.getElementById('tw-val').innerText = state.tokenW;
         document.getElementById('th-val').innerText = state.tokenH;
         document.getElementById('font-preview').style.fontFamily = state.font;
-        
-        // Синхронизация вопросов из текстовых полей в массив state.tasks
         const qs = document.getElementById('qs').value.split('\n'), ans = document.getElementById('ans').value.split('\n');
-        const newTasks = qs.map((q, i) => ({ q: q.trim(), a: (ans[i] || '').trim() })).filter(t => t.q);
-        
-        // Если список задач изменился вручную, обновляем очередь вопросов
-        if(JSON.stringify(newTasks) !== JSON.stringify(state.tasks)) {
-            state.tasks = newTasks;
-            prepareQuestions();
-        }
+        state.tasks = qs.map((q, i) => ({ q: q.trim(), a: (ans[i] || '').trim() })).filter(t => t.q);
         applyStateToAssets();
     }
 
@@ -499,6 +485,7 @@
             ctx.restore();
         });
 
+        // Рисуем START и FINISH
         state.labels.forEach(l => {
             ctx.save();
             ctx.fillStyle = "gold";
@@ -525,6 +512,7 @@
         if (x > cvs.width-120 && y > cvs.height-120) { roll(); return; }
         for(let i=0; i<state.playerCount; i++) { if (Math.hypot(x-tPos[i].x, y-tPos[i].y) < 30) { dragIdx = i; return; } }
         if (!isGame) {
+            // Проверка клика по надписям
             for(let i=0; i<state.labels.length; i++) {
                 if (Math.hypot(x - state.labels[i].x*cvs.width, y - state.labels[i].y*cvs.height) < 40) { labelDragIdx = i; return; }
             }
@@ -564,7 +552,7 @@
     };
 
     function resize() { cvs.width = window.innerWidth; cvs.height = window.innerHeight; cnfCvs.width = window.innerWidth; cnfCvs.height = window.innerHeight; }
-    function save() { update(); const s = JSON.parse(JSON.stringify(state)); s.tasks = []; const url = window.location.origin + window.location.pathname + "?game=" + encode(s); navigator.clipboard.writeText(url); alert("Ссылка скопирована!"); }
+    function save() { update(); const s = JSON.parse(JSON.stringify(state)); s.tasks = []; const url = window.location.origin + window.location.pathname + "?game=" + encode(s); navigator.clipboard.writeText(url); alert("Ссылка для 50+ кружков скопирована!"); }
     function getIframe() { const url = window.location.origin + window.location.pathname + "?game=" + encode(state); const code = `<iframe src="${url}" width="100%" height="600px" frameborder="0"></iframe>`; navigator.clipboard.writeText(code); alert("Код iFrame скопирован!"); }
     function clearFieldOnly() { if(confirm('Очистить все кружки?')) { state.points = []; state.links = []; update(); } }
     function clearInp(id) { document.getElementById(id).value = ''; update(); }
