@@ -212,9 +212,7 @@
         cellSize: 60, ladderTh: 60, snakeTh: 60, tokenW: 50, tokenH: 50, tasks: [], playerCount: 4,
         colors: { dots: '#ffffff', modalBg: '#fff9e6', modalTxt: '#333333', btnBg: '#4CAF50', trail: '#ffffff' }, 
         neon: true, randQ: true, cellShape: 'circle', font: 'Arial', diceSkin: 'classic',
-        trailType: 'match', links: [], sheetUrl: '',
-        // Новое: храним позиции надписей
-        labels: [{t:'START', x:0.85, y:0.85}, {t:'FINISH', x:0.92, y:0.85}]
+        trailType: 'match', links: [], sheetUrl: ''
     };
     
     const bgImg = new Image();
@@ -227,10 +225,11 @@
         {x:window.innerWidth-150,y:120,tx:window.innerWidth-150,ty:120, angle:0, isWin:false}, 
         {x:window.innerWidth-80,y:120,tx:window.innerWidth-80,ty:120, angle:0, isWin:false}
     ];
-    let dragIdx = null, labelDragIdx = null, isGame = false, diceVal = "?", isRoll = false, won = false;
+    let dragIdx = null, isGame = false, diceVal = "?", isRoll = false, won = false;
     let linkFrom = null, isLinkMode = false, particles = [], trailParticles = [], questionQueue = [], currentQuestionIdx = 0;
     let pulseFrame = 0, hue = 0, currentPlayer = 0;
 
+    // НОВАЯ ФУНКЦИЯ ДЛЯ ТАБЛИЦ
     async function loadFromSheet(url) {
         if (!url) return;
         let fetchUrl = url.replace('/edit?usp=sharing', '/export?format=csv').replace('/edit#gid=', '/export?format=csv&gid=');
@@ -242,13 +241,12 @@
             state.tasks = [];
             rows.forEach(cols => {
                 if (cols[0] && cols[0].trim()) {
-                    const q = cols[0].trim().replace(/^"|"$/g, '');
-                    const a = (cols[1] || '').trim().replace(/^"|"$/g, '');
+                    const q = cols[0].trim();
+                    const a = (cols[1] || '').trim();
                     qsArr.push(q); ansArr.push(a);
                     state.tasks.push({ q, a });
                 }
             });
-            // Обновляем поля ввода текстом из таблицы
             document.getElementById('qs').value = qsArr.join('\n');
             document.getElementById('ans').value = ansArr.join('\n');
             state.sheetUrl = url;
@@ -305,7 +303,7 @@
         const d = p.get('game');
         if (d) { 
             try { 
-                state = { ...state, ...decode(d) };
+                state = decode(d);
                 isGame = true; 
                 document.getElementById('panel').style.display = 'none'; 
                 document.getElementById('turn-indicator').style.display = 'block';
@@ -352,20 +350,26 @@
 
     function toggleLinkMode() { isLinkMode = !isLinkMode; linkFrom = null; document.getElementById('link-btn').style.background = isLinkMode ? "#e91e63" : "#9c27b0"; }
 
-    function roll() {
+  function roll() {
         if (isRoll || won) return;
-        isRoll = true; playDiceSound(); if(bgMusic.paused && state.music) bgMusic.play().catch(()=>{});
+        isRoll = true; 
+        playDiceSound(); 
+        if(bgMusic.paused && state.music) bgMusic.play().catch(()=>{});
         let c = 0;
         const iv = setInterval(() => { 
             diceVal = Math.floor(Math.random() * 6) + 1; 
             if (++c > 12) { 
                 clearInterval(iv); 
                 isRoll = false; 
+                
+                // Исправленная логика: вызываем окно всегда после броска
                 if(isGame) { 
                     currentPlayer = (currentPlayer + 1) % state.playerCount; 
                     document.getElementById('turn-indicator').innerText = "ХОД ИГРОКА: " + (currentPlayer + 1); 
-                    setTimeout(showTask, 400); 
-                } 
+                }
+                
+                // Тайм-аут, чтобы игрок успел увидеть выпавшее число до появления окна
+                setTimeout(showTask, 400); 
             } 
         }, 60);
     }
@@ -444,11 +448,13 @@
             let baseColor = hasToken ? `hsl(${hue}, 100%, 60%)` : ((linkFrom === i) ? "#e91e63" : state.colors.dots);
 
             ctx.save();
+            // Свечение (Neon Effect)
             if (state.neon) {
                 ctx.shadowBlur = hasToken ? 35 : 20;
                 ctx.shadowColor = baseColor;
             }
 
+            // Создаем градиент для хрустального эффекта
             let grad = ctx.createRadialGradient(px - s/4, py - s/4, s/10, px, py, s/2);
             grad.addColorStop(0, "rgba(255, 255, 255, 0.9)");
             grad.addColorStop(0.3, "rgba(255, 255, 255, 0.4)");
@@ -461,38 +467,31 @@
             else ctx.roundRect(px-s, py-s/2, s*2, s, 10);
             ctx.fill();
 
+            // Обводка
             ctx.strokeStyle = "rgba(255, 255, 255, 0.6)";
             ctx.lineWidth = 2;
             ctx.stroke();
 
+            // Цветной ободок
             ctx.strokeStyle = baseColor;
             ctx.lineWidth = 1.5;
             ctx.globalAlpha = 0.8;
             ctx.stroke();
 
+            // Маленький блик сверху (Highlight)
             ctx.beginPath();
             ctx.fillStyle = "rgba(255,255,255,0.7)";
             if (state.cellShape === 'circle') ctx.arc(px - s/5, py - s/5, s/8, 0, 7);
             ctx.fill();
             ctx.restore();
 
+            // Номер кружка
             ctx.save();
             ctx.fillStyle = "white";
             ctx.shadowBlur = 5; ctx.shadowColor = "black";
             ctx.font = `bold ${s/2.8}px Arial`;
             ctx.textAlign = "center";
             ctx.fillText(i+1, px, py + s/10);
-            ctx.restore();
-        });
-
-        // Рисуем START и FINISH
-        state.labels.forEach(l => {
-            ctx.save();
-            ctx.fillStyle = "gold";
-            ctx.shadowBlur = 10; ctx.shadowColor = "black";
-            ctx.font = `bold 30px ${state.font}`;
-            ctx.textAlign = "center";
-            ctx.fillText(l.t, l.x * cvs.width, l.y * cvs.height);
             ctx.restore();
         });
 
@@ -512,10 +511,6 @@
         if (x > cvs.width-120 && y > cvs.height-120) { roll(); return; }
         for(let i=0; i<state.playerCount; i++) { if (Math.hypot(x-tPos[i].x, y-tPos[i].y) < 30) { dragIdx = i; return; } }
         if (!isGame) {
-            // Проверка клика по надписям
-            for(let i=0; i<state.labels.length; i++) {
-                if (Math.hypot(x - state.labels[i].x*cvs.width, y - state.labels[i].y*cvs.height) < 40) { labelDragIdx = i; return; }
-            }
             for (let i=0; i<state.points.length; i++) {
                 if (Math.hypot(x-state.points[i].x*cvs.width, y-state.points[i].y*cvs.height) < 30) {
                     if (isLinkMode) { if (linkFrom === null) linkFrom = i; else { if(linkFrom !== i) state.links.push({from: linkFrom, to: i}); linkFrom = null; } } 
@@ -528,11 +523,10 @@
     };
 
     cvs.onmousemove = (e) => {
+        if (dragIdx === null) return;
         const rect = cvs.getBoundingClientRect();
         const x = e.clientX - rect.left;
         const y = e.clientY - rect.top;
-        if (labelDragIdx !== null) { state.labels[labelDragIdx].x = x / cvs.width; state.labels[labelDragIdx].y = y / cvs.height; return; }
-        if (dragIdx === null) return;
         if (typeof dragIdx === 'number') { tPos[dragIdx].tx = x; tPos[dragIdx].ty = y; tPos[dragIdx].x = x; tPos[dragIdx].y = y; }
         else if (typeof dragIdx === 'string' && dragIdx.startsWith('p')) { state.points[dragIdx.substring(1)].x = x/cvs.width; state.points[dragIdx.substring(1)].y = y/cvs.height; }
     };
@@ -548,11 +542,19 @@
                 }
             });
         }
-        dragIdx = null; labelDragIdx = null; update();
+        dragIdx = null; update();
     };
 
     function resize() { cvs.width = window.innerWidth; cvs.height = window.innerHeight; cnfCvs.width = window.innerWidth; cnfCvs.height = window.innerHeight; }
-    function save() { update(); const s = JSON.parse(JSON.stringify(state)); s.tasks = []; const url = window.location.origin + window.location.pathname + "?game=" + encode(s); navigator.clipboard.writeText(url); alert("Ссылка для 50+ кружков скопирована!"); }
+    
+    function save() { 
+        update(); 
+        const s = JSON.parse(JSON.stringify(state)); 
+        s.tasks = []; // Удаляем тексты из ссылки для поддержки 50+ кружков
+        const url = window.location.origin + window.location.pathname + "?game=" + encode(s);
+        navigator.clipboard.writeText(url); alert("Ссылка для 50+ кружков скопирована!"); 
+    }
+    
     function getIframe() { const url = window.location.origin + window.location.pathname + "?game=" + encode(state); const code = `<iframe src="${url}" width="100%" height="600px" frameborder="0"></iframe>`; navigator.clipboard.writeText(code); alert("Код iFrame скопирован!"); }
     function clearFieldOnly() { if(confirm('Очистить все кружки?')) { state.points = []; state.links = []; update(); } }
     function clearInp(id) { document.getElementById(id).value = ''; update(); }
