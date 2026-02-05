@@ -211,24 +211,20 @@
         trailType: 'match', startPos: {x:400, y:150}, finishPos: {x:400, y:250}, links: [],
         sheetUrl: ''
     };
-
     const bgImg = new Image();
     const tImgs = [new Image(), new Image(), new Image(), new Image()];
     const ladderImgObj = new Image();
     const snakeImgObj = new Image();
-    
     let tPos = [
         {x:window.innerWidth-150,y:50,tx:window.innerWidth-150,ty:50, angle:0, isWin:false}, 
         {x:window.innerWidth-80,y:50,tx:window.innerWidth-80,ty:50, angle:0, isWin:false}, 
         {x:window.innerWidth-150,y:120,tx:window.innerWidth-150,ty:120, angle:0, isWin:false}, 
         {x:window.innerWidth-80,y:120,tx:window.innerWidth-80,ty:120, angle:0, isWin:false}
     ];
-
     let dragIdx = null, isGame = false, diceVal = "?", isRoll = false, won = false;
     let linkFrom = null, isLinkMode = false, particles = [], trailParticles = [], questionQueue = [], currentQuestionIdx = 0;
     let pulseFrame = 0, hue = 0, currentPlayer = 0;
 
-    // ФУНКЦИЯ ЗАГРУЗКИ ТАБЛИЦЫ
     async function loadFromSheet(url) {
         if (!url || !url.includes('output=csv')) return;
         try {
@@ -256,10 +252,10 @@
     }
 
     function clearInp(id) { document.getElementById(id).value = ''; update(); }
-
     function clearFieldOnly() {
         if(confirm('Очистить все кружки и связи на поле? Настройки в панели останутся.')) {
-            state.points = []; state.links = []; draw(); update();
+            state.points = [];
+            state.links = []; draw(); update();
         }
     }
 
@@ -269,7 +265,8 @@
         osc.type = type; osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
         gain.gain.setValueAtTime(volume, audioCtx.currentTime);
         gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + duration);
-        osc.connect(gain); gain.connect(audioCtx.destination);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
         osc.start(); osc.stop(audioCtx.currentTime + duration);
     }
 
@@ -304,22 +301,25 @@
         currentQuestionIdx = 0;
     }
 
-    function init() {
-        window.addEventListener('resize', resize); resize();
+    window.onload = () => {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        resize();
         const p = new URLSearchParams(window.location.search);
         const d = p.get('game');
         if (d) { 
             try { 
-                state = decode(d); isGame = true; 
+                state = decode(d);
+                isGame = true; 
                 document.getElementById('panel').style.display = 'none'; 
                 document.getElementById('turn-indicator').style.display = 'block';
                 if (state.sheetUrl) loadFromSheet(state.sheetUrl);
             } catch(e) { console.error(e); } 
         }
-        document.body.style.fontFamily = state.font; document.getElementById('vic-title').style.fontFamily = state.font;
+        document.body.style.fontFamily = state.font;
+        document.getElementById('vic-title').style.fontFamily = state.font;
         if(state.music) { bgMusic.src = state.music; }
         applyStateToAssets(); prepareQuestions(); update(); animate();
-    }
+    };
 
     function applyStateToAssets() {
         if (state.bg) bgImg.src = state.bg;
@@ -329,7 +329,8 @@
     }
 
     function animate() {
-        pulseFrame += 0.035; hue = (hue + 2) % 360;
+        pulseFrame += 0.035;
+        hue = (hue + 2) % 360;
         tPos.forEach((p, i) => { 
             let oldX = p.x, oldY = p.y;
             p.x += (p.tx - p.x) * 0.35; p.y += (p.ty - p.y) * 0.35; 
@@ -357,10 +358,8 @@
     function roll() {
         if (isRoll || won) return;
         isRoll = true; playDiceSound(); if(bgMusic.paused && state.music) bgMusic.play().catch(()=>{});
-        let c = 0; const iv = setInterval(() => { diceVal = Math.floor(Math.random() * 6) + 1; if (++c > 12) { clearInterval(iv); isRoll = false; if(isGame) { currentPlayer = (currentPlayer + 1) % state.playerCount; document.getElementById('turn-indicator').innerText = "ХОД ИГРОКА: " + (currentPlayer + 1); } 
-        // ВЫБРОСИЛИ КУБИК - ПОЛУЧИЛИ ОКНО (КАК В ОРИГИНАЛЕ)
-        setTimeout(showTask, 300); 
-        } }, 60);
+        let c = 0;
+        const iv = setInterval(() => { diceVal = Math.floor(Math.random() * 6) + 1; if (++c > 12) { clearInterval(iv); isRoll = false; if(isGame) { currentPlayer = (currentPlayer + 1) % state.playerCount; document.getElementById('turn-indicator').innerText = "ХОД ИГРОКА: " + (currentPlayer + 1); } setTimeout(showTask, 300); } }, 60);
     }
 
     function showTask() {
@@ -378,7 +377,8 @@
     }
 
     function checkAnswer() {
-        const m = document.getElementById('task-modal'); const taskIdx = m.getAttribute('data-ans-idx');
+        const m = document.getElementById('task-modal');
+        const taskIdx = m.getAttribute('data-ans-idx');
         if (document.getElementById('answer-input').value.trim().toLowerCase() === state.tasks[taskIdx].a.toLowerCase()) { m.classList.remove('show'); playSfx(600, 'sine', 0.2); currentQuestionIdx++; } else { playSfx(100, 'sawtooth', 0.3); alert("Неверно!"); }
     }
 
@@ -404,8 +404,11 @@
         state.trailType = document.getElementById('trail-type').value;
         state.playerCount = parseInt(document.getElementById('p-count').value);
         state.colors = { dots: document.getElementById('c-dots').value, modalBg: document.getElementById('c-bg').value, modalTxt: document.getElementById('c-txt').value, btnBg: document.getElementById('c-btn').value, trail: document.getElementById('c-trail').value };
-        document.getElementById('sz-val').innerText = state.cellSize; document.getElementById('l-th-val').innerText = state.ladderTh; document.getElementById('s-th-val').innerText = state.snakeTh;
-        document.getElementById('tw-val').innerText = state.tokenW; document.getElementById('th-val').innerText = state.tokenH;
+        document.getElementById('sz-val').innerText = state.cellSize;
+        document.getElementById('l-th-val').innerText = state.ladderTh;
+        document.getElementById('s-th-val').innerText = state.snakeTh;
+        document.getElementById('tw-val').innerText = state.tokenW;
+        document.getElementById('th-val').innerText = state.tokenH;
         document.getElementById('font-preview').style.fontFamily = state.font;
         const qs = document.getElementById('qs').value.split('\n'), ans = document.getElementById('ans').value.split('\n');
         state.tasks = qs.map((q, i) => ({ q: q.trim(), a: (ans[i] || '').trim() })).filter(t => t.q);
@@ -415,9 +418,7 @@
     function draw() {
         ctx.clearRect(0, 0, cvs.width, cvs.height);
         if (bgImg.src && bgImg.complete) ctx.drawImage(bgImg, 0, 0, cvs.width, cvs.height);
-        trailParticles.forEach(p => { ctx.globalAlpha = p.life; ctx.fillStyle = p.color; ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, 7); ctx.fill(); });
-        ctx.globalAlpha = 1.0;
-        
+        trailParticles.forEach(p => { ctx.globalAlpha = p.life; ctx.fillStyle = p.color; ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, 7); ctx.fill(); }); ctx.globalAlpha = 1.0;
         state.links.forEach(link => {
             const f = state.points[link.from], t = state.points[link.to];
             if (f && t) {
@@ -427,93 +428,66 @@
                 if (img.complete && img.src) { ctx.save(); ctx.translate(x1, y1); ctx.rotate(angle + Math.PI/2); ctx.drawImage(img, -th/2, -dist, th, dist); ctx.restore(); }
             }
         });
-
         state.points.forEach((p, i) => {
             const px = p.x*cvs.width, py = p.y*cvs.height; let s = state.cellSize;
             const hasToken = tPos.some(tp => Math.hypot(tp.x-px, tp.y-py) < 15);
-            let baseColor;
-            if (hasToken) baseColor = `hsl(${hue}, 100%, 60%)`;
-            else baseColor = (linkFrom === i) ? "#e91e63" : (p.type==='skip'?"#f44336":p.type==='boost'?"#4CAF50":p.type==='task'?"#2196F3":state.colors.dots);
-            ctx.save();
-            if (state.neon) { ctx.shadowBlur = hasToken ? 35 : 15; ctx.shadowColor = baseColor; }
+            let baseColor = hasToken ? `hsl(${hue}, 100%, 60%)` : ((linkFrom === i) ? "#e91e63" : state.colors.dots);
+            ctx.save(); if (state.neon) { ctx.shadowBlur = hasToken ? 35 : 15; ctx.shadowColor = baseColor; }
             ctx.fillStyle = "rgba(255, 255, 255, 0.15)"; ctx.beginPath();
             if (state.cellShape === 'circle') ctx.arc(px, py, s/2, 0, 7);
             else if (state.cellShape === 'square') ctx.roundRect(px-s/2, py-s/2, s, s, 10);
             else ctx.roundRect(px-s, py-s/2, s*2, s, 10);
-            ctx.fill();
-            let grad = ctx.createRadialGradient(px, py, s/6, px, py, s/1.5);
-            grad.addColorStop(0, "rgba(255,255,255,0)");
-            if (hasToken) grad.addColorStop(1, `hsla(${hue}, 100%, 60%, 0.4)`);
-            else grad.addColorStop(1, `rgba(${hexToRgb(baseColor)},0.4)`);
-            ctx.fillStyle = grad; ctx.fill();
-            ctx.strokeStyle = "rgba(255,255,255,0.6)"; ctx.lineWidth = 2; ctx.stroke();
-            ctx.strokeStyle = baseColor; ctx.lineWidth = 1; ctx.globalAlpha = 0.8; ctx.stroke();
-            ctx.globalAlpha = 0.8; ctx.fillStyle = "white"; ctx.beginPath();
-            if (state.cellShape === 'circle') ctx.arc(px - s/4.5, py - s/4.5, s/8, 0, 7);
-            else if (state.cellShape === 'square') ctx.ellipse(px - s/3, py - s/3, s/6, s/10, Math.PI/4, 0, 7);
-            else ctx.ellipse(px - s/1.5, py - s/4.5, s/6, s/10, Math.PI/4, 0, 7);
-            ctx.fill(); ctx.restore();
-            if(!isGame) { ctx.shadowBlur = 0; ctx.fillStyle = "white"; ctx.font = "bold 16px Arial"; ctx.textAlign="center"; ctx.fillText(i+1, px, py+6); }
+            ctx.fill(); ctx.lineWidth = 2; ctx.strokeStyle = baseColor; ctx.stroke();
+            ctx.fillStyle = "white"; ctx.font = `bold ${s/3}px Arial`; ctx.textAlign = "center"; ctx.fillText(i+1, px, py+s/10); ctx.restore();
         });
-
-        ctx.font = `bold 40px ${state.font}`; ctx.fillStyle = state.colors.dots; ctx.shadowBlur = 10; ctx.shadowColor = state.colors.dots;
-        ctx.textAlign = "left"; ctx.fillText("START", state.startPos.x, state.startPos.y); ctx.fillText("FINISH", state.finishPos.x, state.finishPos.y);
-        ctx.shadowBlur = 0;
-
-        for(let i=0; i < (isGame ? state.playerCount : 4); i++) {
-            let sw = state.tokenW, sh = state.tokenH; 
-            if (isGame && i === currentPlayer && !won) { sw += Math.sin(pulseFrame)*5; sh += Math.sin(pulseFrame)*5; }
-            ctx.save(); ctx.translate(tPos[i].x, tPos[i].y); ctx.rotate(tPos[i].angle);
-            if (state.tokens[i] && tImgs[i].complete) ctx.drawImage(tImgs[i], -sw/2, -sh/2, sw, sh);
-            else { ctx.fillStyle = ['red','blue','green','yellow'][i]; ctx.beginPath(); ctx.arc(0, 0, sw/2, 0, 7); ctx.fill(); }
-            ctx.restore();
-        }
-        
-        const dx = cvs.width-110, dy = cvs.height-110; ctx.save();
-        if(state.diceSkin === 'glass') { ctx.fillStyle = "rgba(255,255,255,0.3)"; ctx.strokeStyle = "rgba(255,255,255,0.8)"; ctx.lineWidth = 2; }
-        else if(state.diceSkin === 'neon') { ctx.fillStyle = "#000"; ctx.strokeStyle = state.colors.dots; ctx.lineWidth = 4; ctx.shadowBlur = 15; ctx.shadowColor = state.colors.dots; }
-        else if(state.diceSkin === 'gold') { ctx.fillStyle = "gold"; ctx.strokeStyle = "#b8860b"; ctx.lineWidth = 3; } else { ctx.fillStyle = "white"; }
-        ctx.beginPath(); ctx.roundRect(dx, dy, 90, 90, 15); ctx.fill(); if(state.diceSkin !== 'classic') ctx.stroke();
-        ctx.shadowBlur = 0; ctx.fillStyle = (state.diceSkin === 'gold' || state.diceSkin === 'classic') ? "#333" : "white";
-        ctx.font = `bold 55px ${state.font}`; ctx.textAlign = "center"; ctx.fillText(diceVal, dx+45, dy+65); ctx.restore();
+        tPos.forEach((p, i) => { if (i >= state.playerCount) return; ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.angle); if (tImgs[i].src && tImgs[i].complete) ctx.drawImage(tImgs[i], -state.tokenW/2, -state.tokenH/2, state.tokenW, state.tokenH); else { ctx.fillStyle = ['#ff4d4d','#4d4dff','#4dff4d','#ffff4d'][i]; ctx.beginPath(); ctx.arc(0,0,20,0,7); ctx.fill(); } ctx.restore(); });
+        let dx = cvs.width-100, dy = cvs.height-100, ds = 80;
+        ctx.save(); if(state.diceSkin==='glass') ctx.fillStyle="rgba(255,255,255,0.2)"; else if(state.diceSkin==='gold') ctx.fillStyle="gold"; else ctx.fillStyle="white";
+        if(state.diceSkin==='neon'){ ctx.shadowBlur=20; ctx.shadowColor="cyan"; ctx.strokeStyle="cyan"; ctx.strokeRect(dx,dy,ds,ds); }
+        ctx.roundRect(dx,dy,ds,ds,15); ctx.fill(); ctx.fillStyle="black"; ctx.font="bold 40px Arial"; ctx.textAlign="center"; ctx.fillText(diceVal, dx+ds/2, dy+ds/2+15); ctx.restore();
     }
 
     cvs.onmousedown = (e) => {
-        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        if (audioCtx.state === 'suspended') audioCtx.resume();
+        if(audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
         const x = e.clientX, y = e.clientY;
-        if (x > cvs.width-110 && y > cvs.height-110) { roll(); return; }
-        for(let i=0; i<state.playerCount; i++) if (Math.hypot(x-tPos[i].x, y-tPos[i].y) < state.tokenW/2) { dragIdx = 't'+i; return; }
-        if (Math.hypot(x-state.startPos.x+50, y-state.startPos.y+20) < 80) { dragIdx = 'start'; return; }
-        if (Math.hypot(x-state.finishPos.x+50, y-state.finishPos.y+20) < 80) { dragIdx = 'finish'; return; }
-        for (let i=0; i<state.points.length; i++) { if (Math.hypot(x-state.points[i].x*cvs.width, y-state.points[i].y*cvs.height) < state.cellSize/2) { if (isLinkMode) { if (linkFrom === null) linkFrom = i; else if (linkFrom !== i) { state.links.push({from: linkFrom, to: i}); linkFrom = null; update(); } } else if (!isGame) dragIdx = 'p'+i; return; } }
-        if (!isGame && !isLinkMode) { state.points.push({ x: x/cvs.width, y: y/cvs.height, type: 'normal' }); update(); }
-    };
-
-    window.oncontextmenu = (e) => { e.preventDefault(); if(isGame) return; state.points.forEach(p => { if(Math.hypot(e.clientX-p.x*cvs.width, e.clientY-p.y*cvs.height) < state.cellSize/2) { const types=['normal','skip','boost','task']; p.type=types[(types.indexOf(p.type||'normal')+1)%types.length]; update(); playSfx(400); } }); };
-
-    cvs.onmousemove = (e) => {
-        if (!dragIdx) return;
-        if (dragIdx === 'start') state.startPos = {x: e.clientX, y: e.clientY};
-        else if (dragIdx === 'finish') state.finishPos = {x: e.clientX, y: e.clientY};
-        else if (dragIdx.startsWith('t')) { tPos[dragIdx[1]].tx = e.clientX; tPos[dragIdx[1]].ty = e.clientY; }
-        else if (dragIdx.startsWith('p')) state.points[dragIdx.substring(1)] = { x: e.clientX/cvs.width, y: e.clientY/cvs.height };
+        if (x > cvs.width-120 && y > cvs.height-120) { roll(); return; }
+        for(let i=0; i<state.playerCount; i++) { if (Math.hypot(x-tPos[i].x, y-tPos[i].y) < 30) { dragIdx = i; return; } }
+        if (!isGame) {
+            for (let i=0; i<state.points.length; i++) {
+                if (Math.hypot(x-state.points[i].x*cvs.width, y-state.points[i].y*cvs.height) < 30) {
+                    if (isLinkMode) { if (linkFrom === null) linkFrom = i; else { if(linkFrom !== i) state.links.push({from: linkFrom, to: i}); linkFrom = null; } } 
+                    else dragIdx = 'p'+i;
+                    return;
+                }
+            }
+            if (!isLinkMode) { state.points.push({ x: x/cvs.width, y: y/cvs.height, type: 'task' }); playSfx(400, 'sine', 0.1); }
+        }
         update();
     };
 
+    cvs.onmousemove = (e) => {
+        if (dragIdx === null) return;
+        if (typeof dragIdx === 'number') { tPos[dragIdx].tx = e.clientX; tPos[dragIdx].ty = e.clientY; tPos[dragIdx].x = e.clientX; tPos[dragIdx].y = e.clientY; }
+        else if (typeof dragIdx === 'string' && dragIdx.startsWith('p')) { state.points[dragIdx.substring(1)].x = e.clientX/cvs.width; state.points[dragIdx.substring(1)].y = e.clientY/cvs.height; }
+    };
+
     cvs.onmouseup = () => {
-        if (dragIdx && dragIdx.startsWith('t')) {
-            const idx = dragIdx[1];
-            if (Math.hypot(tPos[idx].tx-state.finishPos.x, tPos[idx].ty-state.finishPos.y) < 80) { won = true; tPos[idx].isWin = true; playVictorySfx(); document.getElementById('victory-overlay').style.display = 'flex'; }
-            state.points.forEach((p, pIdx) => { if (Math.hypot(tPos[idx].tx-p.x*cvs.width, tPos[idx].ty-p.y*cvs.height) < 50) { tPos[idx].tx = p.x*cvs.width; tPos[idx].ty = p.y*cvs.height; if(isGame) { if(p.type === 'task') setTimeout(showTask, 500); if(p.type === 'boost') playSfx(900); if(p.type === 'skip') playSfx(50, 'sawtooth'); } const link = state.links.find(l => l.from === pIdx); if (link) { const isL = state.points[link.from].y > state.points[link.to].y; setTimeout(() => { playSfx(isL?1000:200, isL?'sine':'snake'); tPos[idx].tx = state.points[link.to].x*cvs.width; tPos[idx].ty = state.points[link.to].y*cvs.height; }, 500); } } });
+        if (typeof dragIdx === 'number') {
+            const idx = dragIdx;
+            state.points.forEach((p, pIdx) => { if (Math.hypot(tPos[idx].tx-p.x*cvs.width, tPos[idx].ty-p.y*cvs.height) < 50) { tPos[idx].tx = p.x*cvs.width; tPos[idx].ty = p.y*cvs.height; const link = state.links.find(l => l.from === pIdx); if (link) { setTimeout(() => { tPos[idx].tx = state.points[link.to].x*cvs.width; tPos[idx].ty = state.points[link.to].y*cvs.height; }, 500); } } });
         }
         dragIdx = null; update();
     };
 
-    function resize() { cvs.width = window.innerWidth; cvs.height = window.innerHeight; cnfCvs.width = window.innerWidth; cnfCvs.height = window.innerHeight; }
-    function save() { navigator.clipboard.writeText(window.location.href.split('?')[0] + "?game=" + encode(state)); alert("URL Ссылка скопирована!"); }
-    function getIframe() { const url = window.location.href.split('?')[0] + "?game=" + encode(state); const code = `<iframe src="${url}" width="100%" height="600" style="border:none;" allow="autoplay; fullscreen"></iframe>`; navigator.clipboard.writeText(code); alert("Код iFrame скопирован!"); }
-    init();
+    function save() { 
+        update(); 
+        const saveState = JSON.parse(JSON.stringify(state));
+        saveState.tasks = []; // Очищаем массив для экономии места, подгрузим через sheetUrl
+        const url = window.location.origin + window.location.pathname + "?game=" + encode(saveState);
+        navigator.clipboard.writeText(url); alert("Ссылка для 50+ кружков скопирована!"); 
+    }
+    function resize() { cvs.width = window.innerWidth; cvs.height = window.innerHeight; cnfCvs.width = cvs.width; cnfCvs.height = cvs.height; }
+    function getIframe() { const url = window.location.origin + window.location.pathname + "?game=" + encode(state); const code = `<iframe src="${url}" width="100%" height="600px" frameborder="0"></iframe>`; navigator.clipboard.writeText(code); alert("Код iFrame скопирован!"); }
 </script>
 </body>
 </html>
