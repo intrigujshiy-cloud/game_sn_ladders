@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3D Planet Game: Crystal Rainbow Editor</title>
+    <title>3D Planet Game: Crystal Rainbow Ultra</title>
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Comfortaa:wght@700&family=Bungee&family=Kelly+Slab&family=Monoton&family=Pacifico&family=Ruslan+Display&display=swap" rel="stylesheet">
     <style>
         body { margin: 0; overflow: hidden; font-family: sans-serif; background: #1a1a1a; }
@@ -26,35 +26,22 @@
             color: #888; cursor: pointer; font-size: 18px; font-weight: bold; 
             padding: 0 5px; line-height: 1; z-index: 5;
         }
-        .clear-btn:hover { color: #f44336; }
         .tasks-row { display: flex; gap: 10px; margin-bottom: 10px; }
-        .tasks-row div { flex: 1; }
-        .tasks-row textarea { height: 80px; resize: none; }
+        .tasks-row textarea { height: 80px; resize: none; flex: 1; background: #222; color: white; border: 1px solid #555; border-radius: 4px; padding: 5px; }
         .colors-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
-        .colors-grid label { font-size: 10px; display: flex; flex-direction: column; }
-        input, textarea, select { width: 100%; background: #222; color: white; border: 1px solid #555; padding: 5px 25px 5px 5px; box-sizing: border-box; border-radius: 4px; }
-        .neon-row { background: #333; padding: 10px; border-radius: 5px; margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between; }
-        .btn { width: 100%; padding: 8px; margin-bottom: 5px; cursor: pointer; border: none; border-radius: 4px; font-weight: bold; color: white; }
-        .size-settings { margin-bottom: 15px; }
-        .half-width-sliders { display: flex; gap: 10px; }
-        .half-width-sliders div { flex: 1; }
-        .size-label { font-size: 11px; margin-bottom: 4px; display: block; }
-        #font-preview { background: #444; padding: 10px; border-radius: 5px; text-align: center; margin-bottom: 10px; font-size: 18px; border: 1px solid #666; min-height: 25px; }
+        input, select { width: 100%; background: #222; color: white; border: 1px solid #555; padding: 5px; box-sizing: border-box; border-radius: 4px; }
+        .btn { width: 100%; padding: 10px; margin-bottom: 5px; cursor: pointer; border: none; border-radius: 4px; font-weight: bold; color: white; }
         #task-modal { 
             display: none; position: fixed; top: 50%; left: 50%; 
             transform: translate(-50%, -50%) scale(0.8); 
-            width: 400px; min-height: 200px; padding: 30px; border-radius: 20px; 
+            width: 400px; padding: 30px; border-radius: 20px; 
             z-index: 10000; text-align: center; box-shadow: 0 10px 40px rgba(0,0,0,0.5); 
             border: 2px solid #f0e68c; transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
             background-size: cover; background-position: center;
         }
         #task-modal.show { transform: translate(-50%, -50%) scale(1); display: block; }
-        #answer-input { width: 100%; padding: 12px; margin-bottom: 15px; border-radius: 8px; font-size: 16px; border: 1px solid #ccc; background: white; color: #333; }
-        #check-btn { padding: 12px 20px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; width: 100%; color: white; }
-        #victory-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(45deg, #ff9999, #ffcc99, #ffff99, #99ff99, #99ccff, #cc99ff); background-size: 400% 400%; animation: rainbowMove 6s ease infinite; z-index: 20000; flex-direction: column; justify-content: center; align-items: center; color: #444; text-align: center; cursor: pointer; }
-        #confetti-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
+        #victory-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(45deg, #ff9999, #ffcc99, #ffff99, #99ff99, #99ccff, #cc99ff); background-size: 400% 400%; animation: rainbowMove 6s ease infinite; z-index: 20000; flex-direction: column; justify-content: center; align-items: center; text-align: center; }
         @keyframes rainbowMove { 0%{background-position:0% 50%} 50%{background-position:100% 50%} 100%{background-position:0% 50%} }
-        .cup { font-size: 150px; z-index: 20001; position: relative; }
     </style>
 </head>
 <body>
@@ -62,133 +49,44 @@
 <div id="turn-indicator">ХОД ИГРОКА: 1</div>
 
 <div id="panel">
-    <h3 style="margin:0 0 10px 0; color: #4CAF50;">Конструктор (Rainbow Crystal)</h3>
+    <h3 style="margin:0 0 10px 0; color: #4CAF50;">3D Planet Editor: Ultra</h3>
+    <div class="input-wrap"><input type="text" id="bg-url" placeholder="Ссылка на ФОН ИГРЫ" oninput="update()"></div>
+    <div class="input-wrap"><input type="text" id="modal-bg-url" placeholder="Ссылка на ФОН ОКНА" oninput="update()"></div>
+    <div class="input-wrap"><input type="text" id="music-url" placeholder="МУЗЫКА (URL)" oninput="update()"></div>
     
-    <div class="input-wrap"><input type="text" id="bg-url" placeholder="Ссылка на ФОН ИГРЫ" oninput="update()"><button class="clear-btn" onclick="clearInp('bg-url')">×</button></div>
-    <div class="input-wrap"><input type="text" id="modal-bg-url" placeholder="Ссылка на ФОН ОКНА (URL)" oninput="update()"><button class="clear-btn" onclick="clearInp('modal-bg-url')">×</button></div>
-    <div class="input-wrap"><input type="text" id="music-url" placeholder="Ссылка на МУЗЫКУ (MP3)" oninput="update()"><button class="clear-btn" onclick="clearInp('music-url')">×</button></div>
-    
-    <label style="font-size:11px">ШРИФТ ИГРЫ:</label>
-    <select id="game-font" onchange="update()" style="margin-bottom: 8px;">
-        <option value="Arial">Стандарт (Arial)</option>
-        <option value="'Comfortaa', sans-serif">Мягкий (Comfortaa)</option>
-        <option value="'Press Start 2P', cursive">Пиксельный (8-bit)</option>
-        <option value="'Bungee', cursive">Жирный (Bungee)</option>
-        <option value="'Kelly Slab', cursive">Техно (Kelly Slab)</option>
-        <option value="'Monoton', cursive">Ретро-Неон (Monoton)</option>
-        <option value="'Pacifico', cursive">Рукописный (Pacifico)</option>
-        <option value="'Ruslan Display', cursive">Славянский (Ruslan)</option>
-    </select>
-    <div id="font-preview">ТЕКСТ ТЕКСТ 123</div>
-
-    <div class="neon-row">
-        <label style="font-size:12px; font-weight:bold;">КОЛ-ВО ИГРОКОВ:</label>
-        <select id="p-count" onchange="update()" style="width:60px; margin:0;">
-            <option value="2">2</option>
-            <option value="3">3</option>
-            <option value="4" selected>4</option>
-        </select>
-    </div>
-
-    <div class="size-settings" style="background: #333; padding: 10px; border-radius: 5px; margin-bottom: 10px;">
-        <div class="half-width-sliders">
-            <div>
-                <label class="size-label">Ширина фишки: <span id="tw-val">50</span>px</label>
-                <input type="range" id="token-w" min="10" max="200" value="50" oninput="update()">
-            </div>
-            <div>
-                <label class="size-label">Высота фишки: <span id="th-val">50</span>px</label>
-                <input type="range" id="token-h" min="10" max="200" value="50" oninput="update()">
-            </div>
-        </div>
-    </div>
-
-    <div class="colors-grid">
-        <label>ХВОСТ ФИШКИ: 
-            <select id="trail-type" onchange="update()">
-                <option value="match">В цвет</option>
-                <option value="rainbow">РАДУГА</option>
-                <option value="custom">Свой цвет</option>
-                <option value="none">Нет</option>
-            </select>
-        </label>
-        <label>ЦВЕТ ХВОСТА <input type="color" id="c-trail" value="#ffffff" oninput="update()" style="height:25px;"></label>
-    </div>
-
-    <label style="font-size:11px">СКИН КУБИКА:</label>
-    <select id="dice-skin" onchange="update()" style="margin-bottom: 8px;">
-        <option value="classic">Классика (Белый)</option>
-        <option value="glass">Стеклянный</option>
-        <option value="neon">Неоновый</option>
-        <option value="gold">Золотой</option>
+    <label style="font-size:10px">ШРИФТ:</label>
+    <select id="game-font" onchange="update()">
+        <option value="Arial">Arial</option>
+        <option value="'Press Start 2P'">8-Bit</option>
+        <option value="'Comfortaa'">Comfortaa</option>
+        <option value="'Pacifico'">Pacifico</option>
     </select>
 
-    <div class="colors-grid">
-        <div class="input-wrap"><input type="text" id="t1" placeholder="Фишка 1" oninput="update()"><button class="clear-btn" onclick="clearInp('t1')">×</button></div>
-        <div class="input-wrap"><input type="text" id="t2" placeholder="Фишка 2" oninput="update()"><button class="clear-btn" onclick="clearInp('t2')">×</button></div>
-        <div class="input-wrap"><input type="text" id="t3" placeholder="Фишка 3" oninput="update()"><button class="clear-btn" onclick="clearInp('t3')">×</button></div>
-        <div class="input-wrap"><input type="text" id="t4" placeholder="Фишка 4" oninput="update()"><button class="clear-btn" onclick="clearInp('t4')">×</button></div>
+    <div class="colors-grid" style="margin-top:10px">
+        <label style="font-size:10px">Игроков: <select id="p-count" onchange="update()"><option value="2">2</option><option value="3">3</option><option value="4" selected>4</option></select></label>
+        <label style="font-size:10px">Скин кубика: <select id="dice-skin" onchange="update()"><option value="classic">Классика</option><option value="neon">Неон</option><option value="glass">Стекло</option></select></label>
     </div>
-
-    <div class="input-wrap"><input type="text" id="ladder-url" placeholder="URL Лестницы" oninput="update()"><button class="clear-btn" onclick="clearInp('ladder-url')">×</button></div>
-    <div class="input-wrap"><input type="text" id="snake-url" placeholder="URL Змеи" oninput="update()"><button class="clear-btn" onclick="clearInp('snake-url')">×</button></div>
 
     <div class="tasks-row">
-        <div><label style="font-size:10px">ВОПРОСЫ</label><textarea id="qs" oninput="update()"></textarea></div>
-        <div><label style="font-size:10px">ОТВЕТЫ</label><textarea id="ans" oninput="update()"></textarea></div>
+        <textarea id="qs" placeholder="Вопросы..." oninput="update()"></textarea>
+        <textarea id="ans" placeholder="Ответы..." oninput="update()"></textarea>
     </div>
 
-    <div class="size-settings">
-        <label class="size-label">Клетки: <span id="sz-val">60</span>px</label>
-        <input type="range" id="cell-size" min="30" max="150" value="60" oninput="update()">
-        <div class="half-width-sliders">
-            <div>
-                <label class="size-label">Лестницы: <span id="l-th-val">60</span>px</label>
-                <input type="range" id="ladder-th" min="10" max="250" value="60" oninput="update()">
-            </div>
-            <div>
-                <label class="size-label">Змеи: <span id="s-th-val">60</span>px</label>
-                <input type="range" id="snake-th" min="10" max="250" value="60" oninput="update()">
-            </div>
-        </div>
-    </div>
-
-    <select id="cell-shape" onchange="update()" style="margin-bottom: 8px;">
-        <option value="circle">Круг (Хрусталь)</option>
-        <option value="square">Квадрат (Хрусталь)</option>
-        <option value="rect">Прямоугольник (Хрусталь)</option>
-    </select>
-
-    <div class="neon-row">
-        <label style="font-size:12px; font-weight:bold;">NEON EFFECT</label>
-        <input type="checkbox" id="neon-on" onchange="update()" checked style="width:20px;">
-    </div>
-
-    <div class="colors-grid">
-        <label>Кружки <input type="color" id="c-dots" value="#ffffff" oninput="update()" style="height:25px;"></label>
-        <label>Цвет окна <input type="color" id="c-bg" value="#fff9e6" oninput="update()" style="height:25px;"></label>
-        <label>Текст окна <input type="color" id="c-txt" value="#333333" oninput="update()" style="height:25px;"></label>
-        <label>Кнопка <input type="color" id="c-btn" value="#4CAF50" oninput="update()" style="height:25px;"></label>
-    </div>
-
-    <button id="link-btn" class="btn" style="background:#9c27b0" onclick="toggleLinkMode()">Связать кружки</button>
-    <button class="btn" style="background:#ff9800" onclick="state.points.pop(); draw(); update();">Отмена шага</button>
-    <button class="btn" style="background:#2196F3" onclick="save()">Скопировать ссылку</button>
-    <button class="btn" style="background:#673ab7" onclick="getIframe()">Получить код iFrame</button>
-    <button class="btn" style="background:#f44336" onclick="clearFieldOnly()">Очистить поле</button>
+    <button id="link-btn" class="btn" style="background:#9c27b0" onclick="toggleLinkMode()">Связать (Змеи/Лестницы)</button>
+    <button class="btn" style="background:#2196F3" onclick="save()">Скопировать Ссылку</button>
+    <button class="btn" style="background:#673ab7" onclick="getIframe()">Получить Код iFrame</button>
+    <button class="btn" style="background:#f44336" onclick="state.points = []; state.links = []; update();">Очистить поле</button>
 </div>
 
 <div id="victory-overlay" onclick="location.reload()">
-    <canvas id="confetti-canvas"></canvas>
-    <h1 id="vic-title" style="font-size: 80px; margin: 0; position: relative; z-index: 20002;">VICTORY!</h1>
-    <div class="cup">🏆</div>
+    <h1 id="vic-title" style="font-size: 60px;">VICTORY! 🏆</h1>
 </div>
 
 <div id="task-modal">
     <h2 id="modal-status">ЗАДАНИЕ!</h2>
-    <div id="task-question" style="font-size:24px; margin-bottom:20px; font-weight:bold; word-wrap: break-word;"></div>
-    <input type="text" id="answer-input">
-    <button id="check-btn" onclick="checkAnswer()">CHECK</button>
+    <div id="task-question" style="font-size:22px; margin-bottom:20px; font-weight:bold;"></div>
+    <input type="text" id="answer-input" style="background:white; color:black; padding:10px; margin-bottom:10px">
+    <button id="check-btn" class="btn" onclick="checkAnswer()">ПРОВЕРИТЬ</button>
 </div>
 
 <canvas id="cvs"></canvas>
@@ -196,317 +94,248 @@
 <script>
     const cvs = document.getElementById('cvs');
     const ctx = cvs.getContext('2d');
-    const cnfCvs = document.getElementById('confetti-canvas');
-    const cnfCtx = cnfCvs.getContext('2d');
-    
-    let audioCtx = null;
     const bgMusic = new Audio(); bgMusic.loop = true;
+    let audioCtx = null;
 
     let state = { 
-        bg: '', modalBgImg: '', music: '', tokens: ['', '', '', ''], ladderImg: '', snakeImg: '', points: [], 
-        cellSize: 60, ladderTh: 60, snakeTh: 60, tokenW: 50, tokenH: 50, tasks: [], playerCount: 4,
-        colors: { dots: '#ffffff', modalBg: '#fff9e6', modalTxt: '#333333', btnBg: '#4CAF50', trail: '#ffffff' }, 
-        neon: true, randQ: true, cellShape: 'circle', font: 'Arial', diceSkin: 'classic',
-        trailType: 'match', startPos: {x:400, y:150}, finishPos: {x:400, y:250}, links: []
+        bg: '', modalBgImg: '', music: '', points: [], links: [], tasks: [], 
+        playerCount: 4, diceSkin: 'classic', font: 'Arial',
+        colors: { dots: '#ffffff', modalBg: '#fff9e6', modalTxt: '#333333', btnBg: '#4CAF50' },
+        cellSize: 60, tokenW: 50, tokenH: 50
     };
 
-    const bgImg = new Image();
-    const tImgs = [new Image(), new Image(), new Image(), new Image()];
-    const ladderImgObj = new Image();
-    const snakeImgObj = new Image();
-    
+    let isGame = false;
+    let dragIdx = null;
+    let diceVal = "?";
+    let isRoll = false;
+    let currentPlayer = 0;
+    let isLinkMode = false;
+    let linkFrom = null;
+    let trailParticles = [];
+    let hue = 0;
+
     let tPos = [
-        {x:window.innerWidth-150,y:50,tx:window.innerWidth-150,ty:50, angle:0, isWin:false}, 
-        {x:window.innerWidth-80,y:50,tx:window.innerWidth-80,ty:50, angle:0, isWin:false}, 
-        {x:window.innerWidth-150,y:120,tx:window.innerWidth-150,ty:120, angle:0, isWin:false}, 
-        {x:window.innerWidth-80,y:120,tx:window.innerWidth-80,ty:120, angle:0, isWin:false}
+        {x:100, y:100, tx:100, ty:100, color:'red'},
+        {x:150, y:100, tx:150, ty:150, color:'blue'},
+        {x:100, y:150, tx:100, ty:150, color:'green'},
+        {x:150, y:150, tx:150, ty:150, color:'yellow'}
     ];
 
-    let dragIdx = null, isGame = false, diceVal = "?", isRoll = false, won = false;
-    let linkFrom = null, isLinkMode = false, particles = [], trailParticles = [], questionQueue = [], currentQuestionIdx = 0;
-    let pulseFrame = 0, hue = 0, currentPlayer = 0;
-
-    function hexToRgb(hex) {
-        let r = parseInt(hex.slice(1,3), 16), g = parseInt(hex.slice(3,5), 16), b = parseInt(hex.slice(5,7), 16);
-        return `${r},${g},${b}`;
-    }
-
-    function clearInp(id) { document.getElementById(id).value = ''; update(); }
-
-    function clearFieldOnly() {
-        if(confirm('Очистить все кружки и связи на поле? Настройки в панели останутся.')) {
-            state.points = []; state.links = []; draw(); update();
-        }
-    }
-
-    function playSfx(freq, type = 'sine', duration = 0.2, volume = 0.1) {
-        if(!audioCtx) return;
-        const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
-        osc.type = type; osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
-        gain.gain.setValueAtTime(volume, audioCtx.currentTime);
-        gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + duration);
-        osc.connect(gain); gain.connect(audioCtx.destination);
-        osc.start(); osc.stop(audioCtx.currentTime + duration);
-    }
-
-    function playDiceSound() {
-        if(!audioCtx) return;
-        for(let i=0; i<4; i++) {
-            setTimeout(() => {
-                const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
-                osc.type = 'triangle'; osc.frequency.setValueAtTime(60 + Math.random()*40, audioCtx.currentTime);
-                gain.gain.setValueAtTime(0.1, audioCtx.currentTime); gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.05);
-                osc.connect(gain); gain.connect(audioCtx.destination);
-                osc.start(); osc.stop(audioCtx.currentTime + 0.05);
-            }, i * 70);
-        }
-    }
-
-    function playVictorySfx() {
-        const notes = [440, 440, 440, 554, 659];
-        notes.forEach((f, i) => setTimeout(() => playSfx(f, 'triangle', 0.4, 0.1), [0, 0.12, 0.24, 0.36, 0.55][i] * 1000));
-    }
-
-    function encode(o) { 
-        return btoa(unescape(encodeURIComponent(JSON.stringify(o)))); 
-    }
-    function decode(s) { 
-        return JSON.parse(decodeURIComponent(escape(atob(s)))); 
-    }
-
-    function prepareQuestions() {
-        if (!state.tasks || state.tasks.length === 0) return;
-        questionQueue = state.tasks.map((_, i) => i);
-        for (let i = questionQueue.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [questionQueue[i], questionQueue[j]] = [questionQueue[j], questionQueue[i]];
-        }
-        currentQuestionIdx = 0;
-    }
+    function encode(o) { return btoa(unescape(encodeURIComponent(JSON.stringify(o)))); }
+    function decode(s) { return JSON.parse(decodeURIComponent(escape(atob(s)))); }
 
     function init() {
-        window.addEventListener('resize', resize); resize();
-        
-        // УЛУЧШЕННОЕ ОПРЕДЕЛЕНИЕ ИГРОВОГО РЕЖИМА
         const urlParams = new URLSearchParams(window.location.search);
         const data = urlParams.get('game');
-        
-        if (data && data.length > 10) { 
-            try { 
-                state = decode(data); 
-                isGame = true; 
-                document.getElementById('panel').style.display = 'none'; 
-                document.getElementById('turn-indicator').style.display = 'block';
-            } catch(e) { 
-                console.error("Decode error", e); 
-            } 
-        }
+        const mode = urlParams.get('mode');
 
-        document.body.style.fontFamily = state.font; 
-        document.getElementById('vic-title').style.fontFamily = state.font;
-        if(state.music) { bgMusic.src = state.music; }
-        applyStateToAssets(); prepareQuestions(); update(); animate();
-    }
-
-    function applyStateToAssets() {
-        if (state.bg) bgImg.src = state.bg;
-        if (state.ladderImg) ladderImgObj.src = state.ladderImg;
-        if (state.snakeImg) snakeImgObj.src = state.snakeImg;
-        state.tokens.forEach((url, i) => { if(url) tImgs[i].src = url; });
-    }
-
-    function animate() {
-        pulseFrame += 0.035; hue = (hue + 2) % 360;
-        tPos.forEach((p, i) => { 
-            let oldX = p.x, oldY = p.y;
-            p.x += (p.tx - p.x) * 0.35; p.y += (p.ty - p.y) * 0.35; 
-            if (p.isWin) p.angle += 0.2;
-            if (state.trailType !== 'none' && Math.hypot(p.x - oldX, p.y - oldY) > 0.1) {
-                let color;
-                if(state.trailType === 'rainbow') color = `hsl(${hue}, 100%, 70%)`;
-                else if(state.trailType === 'custom') color = state.colors.trail;
-                else color = ['#ff4d4d','#4d4dff','#4dff4d','#ffff4d'][i];
-                for(let k=0; k<2; k++) trailParticles.push({ x: p.x + (Math.random()-0.5)*15, y: p.y + (Math.random()-0.5)*15, vx: (Math.random()-0.5), vy: (Math.random()-0.5), life: 1.0, color: color, size: Math.random()*2+1 });
+        // Умное скрытие: если внутри iframe ИЛИ есть данные ИЛИ флаг play
+        if (window.self !== window.top || (data && data.length > 20) || mode === 'play') {
+            if (data) {
+                try {
+                    state = decode(data);
+                    isGame = true;
+                    document.getElementById('panel').style.display = 'none';
+                    document.getElementById('turn-indicator').style.display = 'block';
+                } catch(e) { console.error("Data error"); }
             }
-        });
-        trailParticles.forEach((p, i) => { p.x += p.vx; p.y += p.vy; p.life -= 0.02; if(p.life <= 0) trailParticles.splice(i, 1); });
-        draw();
-        if (won) {
-            cnfCtx.clearRect(0, 0, cnfCvs.width, cnfCvs.height);
-            particles.forEach((p, i) => { p.x += p.vx; p.y += p.vy; p.vy += p.gravity; cnfCtx.fillStyle = p.color; cnfCtx.beginPath(); cnfCtx.arc(p.x, p.y, p.r, 0, 7); cnfCtx.fill(); if(p.y > cnfCvs.height + 50) particles.splice(i, 1); });
-            if (Math.random() > 0.6) for(let i=0; i<5; i++) particles.push({ x: cnfCvs.width/2, y: cnfCvs.height/2, vx: (Math.random()-0.5)*20, vy: (Math.random()-0.7)*20, color: `hsl(${Math.random()*360},100%,50%)`, r: Math.random()*5+2, gravity: 0.2 });
         }
-        requestAnimationFrame(animate);
-    }
 
-    function toggleLinkMode() { isLinkMode = !isLinkMode; linkFrom = null; document.getElementById('link-btn').style.background = isLinkMode ? "#e91e63" : "#9c27b0"; }
+        window.addEventListener('resize', () => { cvs.width = window.innerWidth; cvs.height = window.innerHeight; });
+        cvs.width = window.innerWidth; cvs.height = window.innerHeight;
+        
+        // Начальные позиции фишек в углу
+        tPos.forEach((p, i) => { 
+            p.x = p.tx = cvs.width - 150 + (i%2)*60; 
+            p.y = p.ty = 50 + Math.floor(i/2)*60; 
+        });
 
-    function roll() {
-        if (isRoll || won) return;
-        isRoll = true; playDiceSound(); if(bgMusic.paused && state.music) bgMusic.play().catch(()=>{});
-        let c = 0; const iv = setInterval(() => { diceVal = Math.floor(Math.random() * 6) + 1; if (++c > 12) { clearInterval(iv); isRoll = false; if(isGame) { currentPlayer = (currentPlayer + 1) % state.playerCount; document.getElementById('turn-indicator').innerText = "ХОД ИГРОКА: " + (currentPlayer + 1); } setTimeout(showTask, 300); } }, 60);
-    }
-
-    function showTask() {
-        if (!state.tasks || !state.tasks.length) return;
-        if (currentQuestionIdx >= questionQueue.length) prepareQuestions();
-        const taskIdx = questionQueue[currentQuestionIdx];
-        const m = document.getElementById('task-modal');
-        m.style.backgroundColor = state.colors.modalBg;
-        if(state.modalBgImg) { m.style.backgroundImage = `url(${state.modalBgImg})`; } else { m.style.backgroundImage = 'none'; }
-        m.style.color = state.colors.modalTxt; m.style.fontFamily = state.font;
-        document.getElementById('task-question').innerText = state.tasks[taskIdx].q;
-        document.getElementById('check-btn').style.backgroundColor = state.colors.btnBg;
-        m.setAttribute('data-ans-idx', taskIdx); m.classList.add('show');
-        const inp = document.getElementById('answer-input'); inp.value = ""; setTimeout(() => inp.focus(), 100);
-    }
-
-    function checkAnswer() {
-        const m = document.getElementById('task-modal'); const taskIdx = m.getAttribute('data-ans-idx');
-        if (document.getElementById('answer-input').value.trim().toLowerCase() === state.tasks[taskIdx].a.toLowerCase()) { m.classList.remove('show'); playSfx(600, 'sine', 0.2); currentQuestionIdx++; } else { playSfx(100, 'sawtooth', 0.3); alert("Wrong!"); }
+        if(state.music) bgMusic.src = state.music;
+        animate();
     }
 
     function update() {
         if(isGame) return;
         state.bg = document.getElementById('bg-url').value;
         state.modalBgImg = document.getElementById('modal-bg-url').value;
-        const newMusic = document.getElementById('music-url').value;
-        if(newMusic !== state.music) { state.music = newMusic; bgMusic.src = newMusic; }
-        state.ladderImg = document.getElementById('ladder-url').value;
-        state.snakeImg = document.getElementById('snake-url').value;
-        state.tokens = [document.getElementById('t1').value, document.getElementById('t2').value, document.getElementById('t3').value, document.getElementById('t4').value];
-        state.cellSize = parseInt(document.getElementById('cell-size').value);
-        state.ladderTh = parseInt(document.getElementById('ladder-th').value);
-        state.snakeTh = parseInt(document.getElementById('snake-th').value);
-        state.tokenW = parseInt(document.getElementById('token-w').value);
-        state.tokenH = parseInt(document.getElementById('token-h').value);
-        state.neon = document.getElementById('neon-on').checked;
-        state.cellShape = document.getElementById('cell-shape').value;
-        state.font = document.getElementById('game-font').value;
-        state.diceSkin = document.getElementById('dice-skin').value;
-        state.trailType = document.getElementById('trail-type').value;
+        state.music = document.getElementById('music-url').value;
         state.playerCount = parseInt(document.getElementById('p-count').value);
-        state.colors = { dots: document.getElementById('c-dots').value, modalBg: document.getElementById('c-bg').value, modalTxt: document.getElementById('c-txt').value, btnBg: document.getElementById('c-btn').value, trail: document.getElementById('c-trail').value };
-        document.getElementById('sz-val').innerText = state.cellSize; document.getElementById('l-th-val').innerText = state.ladderTh; document.getElementById('s-th-val').innerText = state.snakeTh;
-        document.getElementById('tw-val').innerText = state.tokenW; document.getElementById('th-val').innerText = state.tokenH;
-        document.getElementById('font-preview').style.fontFamily = state.font;
-        const qs = document.getElementById('qs').value.split('\n'), ans = document.getElementById('ans').value.split('\n');
+        state.diceSkin = document.getElementById('dice-skin').value;
+        state.font = document.getElementById('game-font').value;
+        
+        const qs = document.getElementById('qs').value.split('\n');
+        const ans = document.getElementById('ans').value.split('\n');
         state.tasks = qs.map((q, i) => ({ q: q.trim(), a: (ans[i] || '').trim() })).filter(t => t.q);
-        applyStateToAssets();
     }
 
-    function draw() {
+    function animate() {
+        hue = (hue + 1) % 360;
         ctx.clearRect(0, 0, cvs.width, cvs.height);
-        if (bgImg.src && bgImg.complete) ctx.drawImage(bgImg, 0, 0, cvs.width, cvs.height);
-        trailParticles.forEach(p => { ctx.globalAlpha = p.life; ctx.fillStyle = p.color; ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, 7); ctx.fill(); });
-        ctx.globalAlpha = 1.0;
         
-        state.links.forEach(link => {
-            const f = state.points[link.from], t = state.points[link.to];
-            if (f && t) {
-                const x1 = f.x*cvs.width, y1 = f.y*cvs.height, x2 = t.x*cvs.width, y2 = t.y*cvs.height;
-                const dist = Math.hypot(x2-x1, y2-y1), angle = Math.atan2(y2-y1, x2-x1);
-                const isL = (y2 < y1); let img = isL ? ladderImgObj : snakeImgObj; let th = isL ? state.ladderTh : state.snakeTh;
-                if (img.complete && img.src) { ctx.save(); ctx.translate(x1, y1); ctx.rotate(angle + Math.PI/2); ctx.drawImage(img, -th/2, -dist, th, dist); ctx.restore(); }
+        // Фон
+        if(state.bg) {
+            let img = new Image(); img.src = state.bg;
+            if(img.complete) ctx.drawImage(img, 0, 0, cvs.width, cvs.height);
+        }
+
+        // Хвосты
+        trailParticles.forEach((p, i) => {
+            p.x += p.vx; p.y += p.vy; p.life -= 0.02;
+            ctx.globalAlpha = p.life;
+            ctx.fillStyle = p.color;
+            ctx.beginPath(); ctx.arc(p.x, p.y, 3, 0, 7); ctx.fill();
+            if(p.life <= 0) trailParticles.splice(i, 1);
+        });
+        ctx.globalAlpha = 1.0;
+
+        // Связи
+        state.links.forEach(l => {
+            const f = state.points[l.from], t = state.points[l.to];
+            if(f && t) {
+                ctx.beginPath();
+                ctx.setLineDash([5, 5]);
+                ctx.moveTo(f.x*cvs.width, f.y*cvs.height);
+                ctx.lineTo(t.x*cvs.width, t.y*cvs.height);
+                ctx.strokeStyle = "rgba(255,255,255,0.5)";
+                ctx.stroke();
+                ctx.setLineDash([]);
             }
         });
 
+        // Точки (Кристаллы)
         state.points.forEach((p, i) => {
-            const px = p.x*cvs.width, py = p.y*cvs.height; let s = state.cellSize;
-            const hasToken = tPos.some(tp => Math.hypot(tp.x-px, tp.y-py) < 15);
-            let baseColor;
-            if (hasToken) baseColor = `hsl(${hue}, 100%, 60%)`;
-            else baseColor = (linkFrom === i) ? "#e91e63" : (p.type==='skip'?"#f44336":p.type==='boost'?"#4CAF50":p.type==='task'?"#2196F3":state.colors.dots);
+            const px = p.x * cvs.width, py = p.y * cvs.height;
             ctx.save();
-            if (state.neon) { ctx.shadowBlur = hasToken ? 35 : 15; ctx.shadowColor = baseColor; }
-            ctx.fillStyle = "rgba(255, 255, 255, 0.15)"; ctx.beginPath();
-            if (state.cellShape === 'circle') ctx.arc(px, py, s/2, 0, 7);
-            else if (state.cellShape === 'square') ctx.roundRect(px-s/2, py-s/2, s, s, 10);
-            else ctx.roundRect(px-s, py-s/2, s*2, s, 10);
+            ctx.shadowBlur = 15; ctx.shadowColor = state.colors.dots;
+            ctx.beginPath();
+            ctx.arc(px, py, state.cellSize/2, 0, Math.PI*2);
+            ctx.fillStyle = (linkFrom === i) ? "#ff0055" : "rgba(255,255,255,0.2)";
             ctx.fill();
-            let grad = ctx.createRadialGradient(px, py, s/6, px, py, s/1.5);
-            grad.addColorStop(0, "rgba(255,255,255,0)");
-            if (hasToken) grad.addColorStop(1, `hsla(${hue}, 100%, 60%, 0.4)`);
-            else grad.addColorStop(1, `rgba(${hexToRgb(baseColor)},0.4)`);
-            ctx.fillStyle = grad; ctx.fill();
-            ctx.strokeStyle = "rgba(255,255,255,0.6)"; ctx.lineWidth = 2; ctx.stroke();
-            ctx.strokeStyle = baseColor; ctx.lineWidth = 1; ctx.globalAlpha = 0.8; ctx.stroke();
-            ctx.globalAlpha = 0.8; ctx.fillStyle = "white"; ctx.beginPath();
-            if (state.cellShape === 'circle') ctx.arc(px - s/4.5, py - s/4.5, s/8, 0, 7);
-            else if (state.cellShape === 'square') ctx.ellipse(px - s/3, py - s/3, s/6, s/10, Math.PI/4, 0, 7);
-            else ctx.ellipse(px - s/1.5, py - s/4.5, s/6, s/10, Math.PI/4, 0, 7);
-            ctx.fill(); ctx.restore();
-            if(!isGame) { ctx.shadowBlur = 0; ctx.fillStyle = "white"; ctx.font = "bold 16px Arial"; ctx.textAlign="center"; ctx.fillText(i+1, px, py+6); }
+            ctx.strokeStyle = "white"; ctx.lineWidth = 2; ctx.stroke();
+            ctx.restore();
+            if(!isGame) {
+                ctx.fillStyle = "white"; ctx.font = "12px Arial"; ctx.textAlign="center";
+                ctx.fillText(i+1, px, py+5);
+            }
         });
 
-        ctx.font = `bold 40px ${state.font}`; ctx.fillStyle = state.colors.dots; ctx.shadowBlur = 10; ctx.shadowColor = state.colors.dots;
-        ctx.textAlign = "left"; ctx.fillText("START", state.startPos.x, state.startPos.y); ctx.fillText("FINISH", state.finishPos.x, state.finishPos.y);
-        ctx.shadowBlur = 0;
-
+        // Фишки
         for(let i=0; i < (isGame ? state.playerCount : 4); i++) {
-            let sw = state.tokenW, sh = state.tokenH; 
-            if (isGame && i === currentPlayer && !won) { sw += Math.sin(pulseFrame)*5; sh += Math.sin(pulseFrame)*5; }
-            ctx.save(); ctx.translate(tPos[i].x, tPos[i].y); ctx.rotate(tPos[i].angle);
-            if (state.tokens[i] && tImgs[i].complete) ctx.drawImage(tImgs[i], -sw/2, -sh/2, sw, sh);
-            else { ctx.fillStyle = ['red','blue','green','yellow'][i]; ctx.beginPath(); ctx.arc(0, 0, sw/2, 0, 7); ctx.fill(); }
+            let p = tPos[i];
+            let oldX = p.x, oldY = p.y;
+            p.x += (p.tx - p.x) * 0.2; p.y += (p.ty - p.y) * 0.2;
+            
+            if(Math.hypot(p.x - oldX, p.y - oldY) > 0.5) {
+                trailParticles.push({x: p.x, y: p.y, vx: (Math.random()-0.5), vy: (Math.random()-0.5), life: 1, color: ['red','blue','green','yellow'][i]});
+            }
+
+            ctx.save();
+            ctx.shadowBlur = 10; ctx.shadowColor = ['red','blue','green','yellow'][i];
+            ctx.fillStyle = ['red','blue','green','yellow'][i];
+            ctx.beginPath(); ctx.arc(p.x, p.y, 20, 0, 7); ctx.fill();
             ctx.restore();
         }
-        
-        const dx = cvs.width-110, dy = cvs.height-110; ctx.save();
-        if(state.diceSkin === 'glass') { ctx.fillStyle = "rgba(255,255,255,0.3)"; ctx.strokeStyle = "rgba(255,255,255,0.8)"; ctx.lineWidth = 2; }
-        else if(state.diceSkin === 'neon') { ctx.fillStyle = "#000"; ctx.strokeStyle = state.colors.dots; ctx.lineWidth = 4; ctx.shadowBlur = 15; ctx.shadowColor = state.colors.dots; }
-        else if(state.diceSkin === 'gold') { ctx.fillStyle = "gold"; ctx.strokeStyle = "#b8860b"; ctx.lineWidth = 3; } else { ctx.fillStyle = "white"; }
-        ctx.beginPath(); ctx.roundRect(dx, dy, 90, 90, 15); ctx.fill(); if(state.diceSkin !== 'classic') ctx.stroke();
-        ctx.shadowBlur = 0; ctx.fillStyle = (state.diceSkin === 'gold' || state.diceSkin === 'classic') ? "#333" : "white";
-        ctx.font = `bold 55px ${state.font}`; ctx.textAlign = "center"; ctx.fillText(diceVal, dx+45, dy+65); ctx.restore();
+
+        // Кубик
+        const dx = cvs.width - 110, dy = cvs.height - 110;
+        ctx.save();
+        if(state.diceSkin === 'neon') { ctx.shadowBlur = 15; ctx.shadowColor = "cyan"; ctx.strokeStyle = "cyan"; }
+        ctx.fillStyle = state.diceSkin === 'glass' ? "rgba(255,255,255,0.3)" : "white";
+        ctx.beginPath(); ctx.roundRect(dx, dy, 80, 80, 15); ctx.fill(); if(state.diceSkin !== 'classic') ctx.stroke();
+        ctx.fillStyle = "black"; ctx.font = `bold 40px ${state.font}`; ctx.textAlign="center";
+        ctx.fillText(diceVal, dx+40, dy+55);
+        ctx.restore();
+
+        requestAnimationFrame(animate);
     }
 
     cvs.onmousedown = (e) => {
-        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        if (audioCtx.state === 'suspended') audioCtx.resume();
         const x = e.clientX, y = e.clientY;
-        if (x > cvs.width-110 && y > cvs.height-110) { roll(); return; }
-        for(let i=0; i<state.playerCount; i++) if (Math.hypot(x-tPos[i].x, y-tPos[i].y) < state.tokenW/2) { dragIdx = 't'+i; return; }
-        if (Math.hypot(x-state.startPos.x+50, y-state.startPos.y+20) < 80) { dragIdx = 'start'; return; }
-        if (Math.hypot(x-state.finishPos.x+50, y-state.finishPos.y+20) < 80) { dragIdx = 'finish'; return; }
-        for (let i=0; i<state.points.length; i++) { if (Math.hypot(x-state.points[i].x*cvs.width, y-state.points[i].y*cvs.height) < state.cellSize/2) { if (isLinkMode) { if (linkFrom === null) linkFrom = i; else if (linkFrom !== i) { state.links.push({from: linkFrom, to: i}); linkFrom = null; update(); } } else if (!isGame) dragIdx = 'p'+i; return; } }
-        if (!isGame && !isLinkMode) { state.points.push({ x: x/cvs.width, y: y/cvs.height, type: 'normal' }); update(); }
-    };
+        if (x > cvs.width - 110 && y > cvs.height - 110) {
+            diceVal = Math.floor(Math.random() * 6) + 1;
+            if(isGame) {
+                currentPlayer = (currentPlayer + 1) % state.playerCount;
+                document.getElementById('turn-indicator').innerText = "ХОД: ИГРОК " + (currentPlayer + 1);
+                if(state.tasks.length > 0) setTimeout(showTask, 500);
+                if(bgMusic.paused && state.music) bgMusic.play();
+            }
+            return;
+        }
 
-    window.oncontextmenu = (e) => { e.preventDefault(); if(isGame) return; state.points.forEach(p => { if(Math.hypot(e.clientX-p.x*cvs.width, e.clientY-p.y*cvs.height) < state.cellSize/2) { const types=['normal','skip','boost','task']; p.type=types[(types.indexOf(p.type||'normal')+1)%types.length]; update(); playSfx(400); } }); };
+        for(let i=0; i<4; i++) if(Math.hypot(x-tPos[i].x, y-tPos[i].y) < 30) { dragIdx = 't'+i; return; }
+
+        if (!isGame) {
+            if (isLinkMode) {
+                state.points.forEach((p, i) => {
+                    if (Math.hypot(x - p.x*cvs.width, y - p.y*cvs.height) < 30) {
+                        if (linkFrom === null) linkFrom = i;
+                        else { state.links.push({from: linkFrom, to: i}); linkFrom = null; }
+                    }
+                });
+            } else {
+                state.points.push({ x: x/cvs.width, y: y/cvs.height });
+            }
+        }
+    };
 
     cvs.onmousemove = (e) => {
-        if (!dragIdx) return;
-        if (dragIdx === 'start') state.startPos = {x: e.clientX, y: e.clientY};
-        else if (dragIdx === 'finish') state.finishPos = {x: e.clientX, y: e.clientY};
-        else if (dragIdx.startsWith('t')) { tPos[dragIdx[1]].tx = e.clientX; tPos[dragIdx[1]].ty = e.clientY; }
-        else if (dragIdx.startsWith('p')) state.points[dragIdx.substring(1)] = { x: e.clientX/cvs.width, y: e.clientY/cvs.height };
-        update();
-    };
+        if(dragIdx && dragIdx.startsWith('t')) {
+            let i = dragIdx[1];
+            tPos[i].tx = e.clientX; tPos[i].ty = e.clientY;
+        }
+    }
 
     cvs.onmouseup = () => {
-        if (dragIdx && dragIdx.startsWith('t')) {
-            const idx = dragIdx[1];
-            if (Math.hypot(tPos[idx].tx-state.finishPos.x, tPos[idx].ty-state.finishPos.y) < 80) { won = true; tPos[idx].isWin = true; playVictorySfx(); document.getElementById('victory-overlay').style.display = 'flex'; }
-            state.points.forEach((p, pIdx) => { if (Math.hypot(tPos[idx].tx-p.x*cvs.width, tPos[idx].ty-p.y*cvs.height) < 50) { tPos[idx].tx = p.x*cvs.width; tPos[idx].ty = p.y*cvs.height; if(isGame) { if(p.type === 'task') setTimeout(showTask, 500); if(p.type === 'boost') playSfx(900); if(p.type === 'skip') playSfx(50, 'sawtooth'); } const link = state.links.find(l => l.from === pIdx); if (link) { const isL = state.points[link.from].y > state.points[link.to].y; setTimeout(() => { playSfx(isL?1000:200, isL?'sine':'snake'); tPos[idx].tx = state.points[link.to].x*cvs.width; tPos[idx].ty = state.points[link.to].y*cvs.height; }, 500); } } });
+        if(dragIdx && dragIdx.startsWith('t')) {
+            let i = dragIdx[1];
+            state.points.forEach((p, pIdx) => {
+                if(Math.hypot(tPos[i].tx - p.x*cvs.width, tPos[i].ty - p.y*cvs.height) < 40) {
+                    tPos[i].tx = p.x*cvs.width; tPos[i].ty = p.y*cvs.height;
+                    const link = state.links.find(l => l.from === pIdx);
+                    if(link) {
+                        setTimeout(() => {
+                            tPos[i].tx = state.points[link.to].x*cvs.width;
+                            tPos[i].ty = state.points[link.to].y*cvs.height;
+                        }, 500);
+                    }
+                }
+            });
         }
-        dragIdx = null; update();
-    };
+        dragIdx = null;
+    }
 
-    function resize() { cvs.width = window.innerWidth; cvs.height = window.innerHeight; cnfCvs.width = window.innerWidth; cnfCvs.height = window.innerHeight; }
-    
-    function save() { 
-        const link = window.location.origin + window.location.pathname + "?game=" + encode(state);
-        navigator.clipboard.writeText(link); 
-        alert("URL Ссылка скопирована!"); 
+    function showTask() {
+        const task = state.tasks[Math.floor(Math.random() * state.tasks.length)];
+        const m = document.getElementById('task-modal');
+        m.style.fontFamily = state.font;
+        document.getElementById('task-question').innerText = task.q;
+        m.setAttribute('data-ans', task.a);
+        m.classList.add('show');
     }
-    
-    function getIframe() { 
-        const url = window.location.origin + window.location.pathname + "?game=" + encode(state);
-        const code = `<iframe src="${url}" width="100%" height="800" style="border:none;" allow="autoplay; fullscreen; encrypted-media"></iframe>`; 
-        navigator.clipboard.writeText(code); 
-        alert("Код iFrame скопирован!"); 
+
+    function checkAnswer() {
+        const m = document.getElementById('task-modal');
+        if(document.getElementById('answer-input').value.toLowerCase().trim() === m.getAttribute('data-ans').toLowerCase().trim()) {
+            m.classList.remove('show');
+            document.getElementById('answer-input').value = "";
+        } else alert("Попробуй еще раз!");
     }
+
+    function toggleLinkMode() { isLinkMode = !isLinkMode; linkFrom = null; }
+
+    function save() {
+        const url = window.location.origin + window.location.pathname + "?game=" + encode(state) + "&mode=play";
+        navigator.clipboard.writeText(url);
+        alert("Ссылка скопирована!");
+    }
+
+    function getIframe() {
+        const url = window.location.origin + window.location.pathname + "?game=" + encode(state) + "&mode=play";
+        const code = `<iframe src="${url}" width="100%" height="800" style="border:none;" allow="autoplay; fullscreen"></iframe>`;
+        navigator.clipboard.writeText(code);
+        alert("Код iFrame для Genially скопирован!");
+    }
+
     init();
 </script>
 </body>
