@@ -450,21 +450,26 @@
         state.points.forEach((p, i) => {
             const px = p.x*cvs.width, py = p.y*cvs.height;
             let s = state.cellSize;
-            const hasToken = tPos.some(tp => Math.hypot(tp.x-px, tp.y-py) < 15);
+            const hasToken = tPos.some((tp, tidx) => tidx < state.playerCount && Math.hypot(tp.x-px, tp.y-py) < 15);
             let baseColor = hasToken ? `hsl(${hue}, 100%, 60%)` : ((linkFrom === i) ? "#e91e63" : state.colors.dots);
 
             ctx.save();
-            if (state.neon) { ctx.shadowBlur = hasToken ? 35 : 20; ctx.shadowColor = baseColor; }
+            if (state.neon) { 
+                ctx.shadowBlur = hasToken ? 35 : 20; 
+                ctx.shadowColor = baseColor; 
+            }
             let grad = ctx.createRadialGradient(px - s/4, py - s/4, s/10, px, py, s/2);
             grad.addColorStop(0, "rgba(255, 255, 255, 0.9)");
             grad.addColorStop(0.3, "rgba(255, 255, 255, 0.4)");
-            grad.addColorStop(1, "rgba(255, 255, 255, 0.1)");
+            grad.addColorStop(1, hasToken ? "rgba(255, 255, 255, 0.1)" : state.colors.dots + "44");
+            
             ctx.fillStyle = grad;
             ctx.beginPath();
             if (state.cellShape === 'circle') ctx.arc(px, py, s/2, 0, 7);
             else if (state.cellShape === 'square') ctx.roundRect(px-s/2, py-s/2, s, s, 10);
             else ctx.roundRect(px-s, py-s/2, s*2, s, 10);
             ctx.fill();
+            
             ctx.strokeStyle = "rgba(255, 255, 255, 0.6)"; ctx.lineWidth = 2; ctx.stroke();
             ctx.strokeStyle = baseColor; ctx.lineWidth = 1.5; ctx.globalAlpha = 0.8; ctx.stroke();
             ctx.restore();
