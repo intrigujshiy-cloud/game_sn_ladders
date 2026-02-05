@@ -436,24 +436,57 @@
         });
 
         state.points.forEach((p, i) => {
-            const px = p.x*cvs.width, py = p.y*cvs.height; let s = state.cellSize;
+            const px = p.x*cvs.width, py = p.y*cvs.height;
+            let s = state.cellSize;
             const hasToken = tPos.some(tp => Math.hypot(tp.x-px, tp.y-py) < 15);
             let baseColor = hasToken ? `hsl(${hue}, 100%, 60%)` : ((linkFrom === i) ? "#e91e63" : state.colors.dots);
-            
+
             ctx.save();
-            if (state.neon) { ctx.shadowBlur = hasToken ? 35 : 15; ctx.shadowColor = baseColor; }
-            ctx.fillStyle = "rgba(255, 255, 255, 0.15)";
+            // Свечение (Neon Effect)
+            if (state.neon) {
+                ctx.shadowBlur = hasToken ? 35 : 20;
+                ctx.shadowColor = baseColor;
+            }
+
+            // Создаем градиент для хрустального эффекта
+            let grad = ctx.createRadialGradient(px - s/4, py - s/4, s/10, px, py, s/2);
+            grad.addColorStop(0, "rgba(255, 255, 255, 0.9)");
+            grad.addColorStop(0.3, "rgba(255, 255, 255, 0.4)");
+            grad.addColorStop(1, "rgba(255, 255, 255, 0.1)");
+            
+            ctx.fillStyle = grad;
             ctx.beginPath();
             if (state.cellShape === 'circle') ctx.arc(px, py, s/2, 0, 7);
             else if (state.cellShape === 'square') ctx.roundRect(px-s/2, py-s/2, s, s, 10);
             else ctx.roundRect(px-s, py-s/2, s*2, s, 10);
             ctx.fill();
-            ctx.strokeStyle = "rgba(255,255,255,0.6)"; ctx.lineWidth = 2; ctx.stroke();
-            ctx.strokeStyle = baseColor; ctx.lineWidth = 1; ctx.globalAlpha = 0.8; ctx.stroke();
+
+            // Обводка
+            ctx.strokeStyle = "rgba(255, 255, 255, 0.6)";
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            // Цветной ободок
+            ctx.strokeStyle = baseColor;
+            ctx.lineWidth = 1.5;
+            ctx.globalAlpha = 0.8;
+            ctx.stroke();
+
+            // Маленький блик сверху (Highlight)
+            ctx.beginPath();
+            ctx.fillStyle = "rgba(255,255,255,0.7)";
+            if (state.cellShape === 'circle') ctx.arc(px - s/5, py - s/5, s/8, 0, 7);
+            ctx.fill();
             ctx.restore();
 
+            // Номер кружка
             ctx.save();
-            ctx.fillStyle = "white"; ctx.font = `bold ${s/3}px Arial`; ctx.textAlign = "center"; ctx.fillText(i+1, px, py+s/10); ctx.restore();
+            ctx.fillStyle = "white";
+            ctx.shadowBlur = 5; ctx.shadowColor = "black";
+            ctx.font = `bold ${s/2.8}px Arial`;
+            ctx.textAlign = "center";
+            ctx.fillText(i+1, px, py + s/10);
+            ctx.restore();
         });
 
         tPos.forEach((p, i) => { if (i >= state.playerCount) return; ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.angle); if (tImgs[i].src && tImgs[i].complete) ctx.drawImage(tImgs[i], -state.tokenW/2, -state.tokenH/2, state.tokenW, state.tokenH); else { ctx.fillStyle = ['#ff4d4d','#4d4dff','#4dff4d','#ffff4d'][i]; ctx.beginPath(); ctx.arc(0,0,20,0,7); ctx.fill(); } ctx.restore(); });
