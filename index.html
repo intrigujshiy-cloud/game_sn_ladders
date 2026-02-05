@@ -6,8 +6,8 @@
     <title>3D Planet Game: Crystal Rainbow Editor</title>
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Comfortaa:wght@700&family=Bungee&family=Kelly+Slab&family=Monoton&family=Pacifico&family=Ruslan+Display&display=swap" rel="stylesheet">
     <style>
-        body { margin: 0; overflow: hidden; font-family: sans-serif; background: #1a1a1a; }
-        canvas { display: block; }
+        body { margin: 0; overflow: hidden; font-family: sans-serif; background: #1a1a1a; width: 100vw; height: 100vh; }
+        canvas { display: block; touch-action: none; }
         #panel {
             position: absolute; left: 10px; top: 10px; width: 340px; 
             background: rgba(0,0,0,0.95); padding: 15px; border-radius: 10px;
@@ -63,7 +63,6 @@
 
 <div id="panel">
     <h3 style="margin:0 0 10px 0; color: #4CAF50;">Конструктор (Rainbow Crystal)</h3>
-    
     <div class="input-wrap"><input type="text" id="sheet-url" placeholder="Ссылка на Google Таблицу (CSV)" oninput="loadFromSheet(this.value)"><button class="clear-btn" onclick="clearInp('sheet-url')">×</button></div>
     <div class="input-wrap"><input type="text" id="bg-url" placeholder="Ссылка на ФОН ИГРЫ" oninput="update()"><button class="clear-btn" onclick="clearInp('bg-url')">×</button></div>
     <div class="input-wrap"><input type="text" id="modal-bg-url" placeholder="Ссылка на ФОН ОКНА (URL)" oninput="update()"><button class="clear-btn" onclick="clearInp('modal-bg-url')">×</button></div>
@@ -208,9 +207,9 @@
         cellSize: 60, ladderTh: 60, snakeTh: 60, tokenW: 50, tokenH: 50, tasks: [], playerCount: 4,
         colors: { dots: '#ffffff', modalBg: '#fff9e6', modalTxt: '#333333', btnBg: '#4CAF50', trail: '#ffffff' }, 
         neon: true, randQ: true, cellShape: 'circle', font: 'Arial', diceSkin: 'classic',
-        trailType: 'match', startPos: {x:400, y:150}, finishPos: {x:400, y:250}, links: [],
-        sheetUrl: ''
+        trailType: 'match', links: [], sheetUrl: ''
     };
+    
     const bgImg = new Image();
     const tImgs = [new Image(), new Image(), new Image(), new Image()];
     const ladderImgObj = new Image();
@@ -420,7 +419,7 @@
     function draw() {
         ctx.clearRect(0, 0, cvs.width, cvs.height);
         if (bgImg.src && bgImg.complete) ctx.drawImage(bgImg, 0, 0, cvs.width, cvs.height);
-        trailParticles.forEach(p => { ctx.globalAlpha = p.life; ctx.fillStyle = p.color; ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, 7); ctx.fill(); }); ctx.globalAlpha = 1.0;
+        
         state.links.forEach(link => {
             const f = state.points[link.from], t = state.points[link.to];
             if (f && t) {
@@ -430,13 +429,13 @@
                 if (img.complete && img.src) { ctx.save(); ctx.translate(x1, y1); ctx.rotate(angle + Math.PI/2); ctx.drawImage(img, -th/2, -dist, th, dist); ctx.restore(); }
             }
         });
+
         state.points.forEach((p, i) => {
             const px = p.x*cvs.width, py = p.y*cvs.height; let s = state.cellSize;
             const hasToken = tPos.some(tp => Math.hypot(tp.x-px, tp.y-py) < 15);
             let baseColor = hasToken ? `hsl(${hue}, 100%, 60%)` : ((linkFrom === i) ? "#e91e63" : state.colors.dots);
             
             ctx.save();
-            // ХРУСТАЛЬНЫЙ ЭФФЕКТ: Слои
             if (state.neon) { ctx.shadowBlur = hasToken ? 35 : 15; ctx.shadowColor = baseColor; }
 
             // 1. Тело стекла (полупрозрачное)
@@ -466,7 +465,7 @@
             ctx.globalAlpha = 0.8;
             ctx.stroke();
 
-            // 5. Блик "как на фото"
+            // 5. Блик
             ctx.globalAlpha = 0.8;
             ctx.fillStyle = "white";
             ctx.beginPath();
@@ -479,7 +478,9 @@
             ctx.save();
             ctx.fillStyle = "white"; ctx.font = `bold ${s/3}px Arial`; ctx.textAlign = "center"; ctx.fillText(i+1, px, py+s/10); ctx.restore();
         });
+
         tPos.forEach((p, i) => { if (i >= state.playerCount) return; ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.angle); if (tImgs[i].src && tImgs[i].complete) ctx.drawImage(tImgs[i], -state.tokenW/2, -state.tokenH/2, state.tokenW, state.tokenH); else { ctx.fillStyle = ['#ff4d4d','#4d4dff','#4dff4d','#ffff4d'][i]; ctx.beginPath(); ctx.arc(0,0,20,0,7); ctx.fill(); } ctx.restore(); });
+        
         let dx = cvs.width-100, dy = cvs.height-100, ds = 80;
         ctx.save(); if(state.diceSkin==='glass') ctx.fillStyle="rgba(255,255,255,0.2)"; else if(state.diceSkin==='gold') ctx.fillStyle="gold"; else ctx.fillStyle="white";
         if(state.diceSkin==='neon'){ ctx.shadowBlur=20; ctx.shadowColor="cyan"; ctx.strokeStyle="cyan"; ctx.strokeRect(dx,dy,ds,ds); }
@@ -488,7 +489,9 @@
 
     cvs.onmousedown = (e) => {
         if(audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
-        const x = e.clientX, y = e.clientY;
+        const rect = cvs.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
         if (x > cvs.width-120 && y > cvs.height-120) { roll(); return; }
         for(let i=0; i<state.playerCount; i++) { if (Math.hypot(x-tPos[i].x, y-tPos[i].y) < 30) { dragIdx = i; return; } }
         if (!isGame) {
@@ -499,15 +502,17 @@
                     return;
                 }
             }
-            if (!isLinkMode) { state.points.push({ x: x/cvs.width, y: y/cvs.height, type: 'task' }); playSfx(400, 'sine', 0.1); }
+            if (!isLinkMode) { state.points.push({ x: x/cvs.width, y: y/cvs.height }); playSfx(400, 'sine', 0.1); }
         }
-        update();
     };
 
     cvs.onmousemove = (e) => {
         if (dragIdx === null) return;
-        if (typeof dragIdx === 'number') { tPos[dragIdx].tx = e.clientX; tPos[dragIdx].ty = e.clientY; tPos[dragIdx].x = e.clientX; tPos[dragIdx].y = e.clientY; }
-        else if (typeof dragIdx === 'string' && dragIdx.startsWith('p')) { state.points[dragIdx.substring(1)].x = e.clientX/cvs.width; state.points[dragIdx.substring(1)].y = e.clientY/cvs.height; }
+        const rect = cvs.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        if (typeof dragIdx === 'number') { tPos[dragIdx].tx = x; tPos[dragIdx].ty = y; tPos[dragIdx].x = x; tPos[dragIdx].y = y; }
+        else if (typeof dragIdx === 'string' && dragIdx.startsWith('p')) { state.points[dragIdx.substring(1)].x = x/cvs.width; state.points[dragIdx.substring(1)].y = y/cvs.height; }
     };
 
     cvs.onmouseup = () => {
@@ -523,9 +528,18 @@
         const s = JSON.parse(JSON.stringify(state)); 
         s.tasks = []; 
         const url = window.location.origin + window.location.pathname + "?game=" + encode(s);
-        navigator.clipboard.writeText(url); alert("Ссылка для 50+ кружков скопирована!"); 
+        navigator.clipboard.writeText(url); alert("Ссылка скопирована!"); 
     }
-    function resize() { cvs.width = window.innerWidth; cvs.height = window.innerHeight; cnfCvs.width = cvs.width; cnfCvs.height = cvs.height; }
+    
+    function resize() { 
+        cvs.width = window.innerWidth; 
+        cvs.height = window.innerHeight; 
+        cnfCvs.width = cvs.width; 
+        cnfCvs.height = cvs.height; 
+    }
+
+    window.onresize = resize;
+
     function getIframe() { const url = window.location.origin + window.location.pathname + "?game=" + encode(state); const code = `<iframe src="${url}" width="100%" height="600px" frameborder="0"></iframe>`; navigator.clipboard.writeText(code); alert("Код iFrame скопирован!"); }
     function clearFieldOnly() { if(confirm('Очистить все кружки?')) { state.points = []; state.links = []; update(); } }
     function clearInp(id) { document.getElementById(id).value = ''; update(); }
