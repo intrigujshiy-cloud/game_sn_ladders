@@ -42,36 +42,20 @@
         .size-label { font-size: 11px; margin-bottom: 4px; display: block; }
         #font-preview { background: #444; padding: 10px; border-radius: 5px; text-align: center; margin-bottom: 10px; font-size: 18px; border: 1px solid #666; min-height: 25px; }
         
-        /* Модалка задания */
-        #task-modal { 
-            display: none; position: fixed; top: 50%; left: 50%; 
-            transform: translate(-50%, -50%) scale(0.8); 
-            width: 400px; min-height: 200px; padding: 30px; border-radius: 20px; 
-            z-index: 10000; text-align: center; box-shadow: 0 10px 40px rgba(0,0,0,0.5); 
-            border: 2px solid #f0e68c; transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            background-size: cover; background-position: center;
-        }
-        #task-modal.show { transform: translate(-50%, -50%) scale(1); display: block; }
-        #answer-input { width: 100%; padding: 12px; margin-bottom: 15px; border-radius: 8px; font-size: 16px; border: 1px solid #ccc; background: white; color: #333; }
-        #check-btn { padding: 12px 20px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; width: 100%; color: white; }
-        
-        /* Экран победы (Кубок и конфетти) */
+        /* СТИЛИ ПОБЕДЫ (ДОБАВЛЕНО) */
         #victory-overlay { 
             display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
-            background: rgba(0,0,0,0.9); z-index: 20000;
-            flex-direction: column; justify-content: center; align-items: center; 
-            text-align: center; 
+            background: rgba(0,0,0,0.85); z-index: 20000;
+            flex-direction: column; justify-content: center; align-items: center; text-align: center; 
         }
         #confetti-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
-        .cup-container { font-size: 160px; z-index: 20001; position: relative; animation: cupPop 1s ease-out infinite alternate; }
-        @keyframes cupPop { from { transform: scale(1); } to { transform: scale(1.1); } }
+        .cup { font-size: 150px; z-index: 20001; position: relative; animation: bounce 2s infinite; }
+        @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-20px); } }
         .retry-btn { 
-            margin-top: 40px; padding: 20px 50px; font-size: 28px; cursor: pointer; 
-            background: #FFD700; color: #000; border: none; border-radius: 60px; 
-            font-weight: bold; z-index: 20002; box-shadow: 0 0 20px rgba(255,215,0,0.5);
-            transition: 0.3s;
+            margin-top: 30px; padding: 15px 40px; font-size: 24px; cursor: pointer; 
+            background: #4CAF50; color: white; border: none; border-radius: 50px; 
+            font-weight: bold; z-index: 20002; box-shadow: 0 5px 15px rgba(0,0,0,0.3);
         }
-        .retry-btn:hover { transform: scale(1.1); background: #fff; }
     </style>
 </head>
 <body>
@@ -201,16 +185,9 @@
 
 <div id="victory-overlay">
     <canvas id="confetti-canvas"></canvas>
-    <h1 id="vic-title" style="font-size: 60px; margin: 0; color: gold; text-shadow: 0 0 20px rgba(255,215,0,0.8);">ПОБЕДА!</h1>
-    <div class="cup-container">🏆</div>
+    <h1 id="vic-title" style="font-size: 80px; margin: 0; color: gold;">ПОБЕДА!</h1>
+    <div class="cup">🏆</div>
     <button class="retry-btn" onclick="location.reload()">ИГРАТЬ ЗАНОВО</button>
-</div>
-
-<div id="task-modal">
-    <h2 id="modal-status">ЗАДАНИЕ!</h2>
-    <div id="task-question" style="font-size:24px; margin-bottom:20px; font-weight:bold; word-wrap: break-word;"></div>
-    <input type="text" id="answer-input">
-    <button id="check-btn" onclick="checkAnswer()">CHECK</button>
 </div>
 
 <canvas id="cvs"></canvas>
@@ -229,7 +206,7 @@
         cellSize: 60, ladderTh: 60, snakeTh: 60, tokenW: 50, tokenH: 50, tasks: [], playerCount: 4,
         colors: { dots: '#ffffff', modalBg: '#fff9e6', modalTxt: '#333333', btnBg: '#4CAF50', trail: '#ffffff' }, 
         neon: true, cellShape: 'circle', font: 'Arial', diceSkin: 'classic',
-        trailType: 'match', links: [], sheetUrl: ''
+        trailType: 'match', links: []
     };
     
     const bgImg = new Image();
@@ -237,65 +214,22 @@
     const ladderImgObj = new Image();
     const snakeImgObj = new Image();
     let tPos = [
-        {x:window.innerWidth-150,y:50,tx:window.innerWidth-150,ty:50, angle:0}, 
-        {x:window.innerWidth-80,y:50,tx:window.innerWidth-80,ty:50, angle:0}, 
-        {x:window.innerWidth-150,y:120,tx:window.innerWidth-150,ty:120, angle:0}, 
-        {x:window.innerWidth-80,y:120,tx:window.innerWidth-80,ty:120, angle:0}
+        {x:window.innerWidth-150,y:50,tx:window.innerWidth-150,ty:50}, 
+        {x:window.innerWidth-80,y:50,tx:window.innerWidth-80,ty:50}, 
+        {x:window.innerWidth-150,y:120,tx:window.innerWidth-150,ty:120}, 
+        {x:window.innerWidth-80,y:120,tx:window.innerWidth-80,ty:120}
     ];
     let dragIdx = null, isGame = false, diceVal = "?", isRoll = false, won = false;
-    let linkFrom = null, isLinkMode = false, particles = [], trailParticles = [], currentQuestionIdx = 0;
+    let linkFrom = null, isLinkMode = false, particles = [], trailParticles = [];
     let pulseFrame = 0, hue = 0, currentPlayer = 0;
 
-    async function loadFromSheet(url) {
-        if (!url) return;
-        let fetchUrl = url.replace('/edit?usp=sharing', '/export?format=csv').replace('/edit#gid=', '/export?format=csv&gid=');
-        try {
-            const response = await fetch(fetchUrl);
-            const data = await response.text();
-            const rows = data.split('\n').map(row => row.split(','));
-            const qsArr = [], ansArr = [];
-            state.tasks = [];
-            rows.forEach(cols => {
-                if (cols[0] && cols[0].trim()) {
-                    const q = cols[0].trim();
-                    const a = (cols[1] || '').trim();
-                    qsArr.push(q); ansArr.push(a);
-                    state.tasks.push({ q, a });
-                }
-            });
-            document.getElementById('qs').value = qsArr.join('\n');
-            document.getElementById('ans').value = ansArr.join('\n');
-            state.sheetUrl = url;
-            update();
-        } catch (e) { console.error("Sheet error", e); }
-    }
-
-    function playSfx(freq, type = 'sine', duration = 0.2, volume = 0.1) {
+    function playSfx(freq) {
         if(!audioCtx) return;
         const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
-        osc.type = type; osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
-        gain.gain.setValueAtTime(volume, audioCtx.currentTime);
-        gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + duration);
+        osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
         osc.connect(gain); gain.connect(audioCtx.destination);
-        osc.start(); osc.stop(audioCtx.currentTime + duration);
-    }
-
-    function playDiceSound() {
-        if(!audioCtx) return;
-        for(let i=0; i<4; i++) {
-            setTimeout(() => {
-                const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
-                osc.type = 'triangle'; osc.frequency.setValueAtTime(60 + Math.random()*40, audioCtx.currentTime);
-                gain.gain.setValueAtTime(0.1, audioCtx.currentTime); gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.05);
-                osc.connect(gain); gain.connect(audioCtx.destination);
-                osc.start(); osc.stop(audioCtx.currentTime + 0.05);
-            }, i * 70);
-        }
-    }
-
-    function playVictorySfx() {
-        const notes = [523, 659, 784, 1046];
-        notes.forEach((f, i) => setTimeout(() => playSfx(f, 'triangle', 0.5, 0.1), i * 150));
+        osc.start(); osc.stop(audioCtx.currentTime + 0.2);
     }
 
     function encode(o) { return btoa(unescape(encodeURIComponent(JSON.stringify(o)))); }
@@ -312,62 +246,40 @@
                 isGame = true;
                 document.getElementById('panel').style.display = 'none';
                 document.getElementById('turn-indicator').style.display = 'block';
-                if (state.sheetUrl) loadFromSheet(state.sheetUrl);
             } catch(e) { console.error(e); }
         }
-        applyStateToAssets();
         update();
         animate();
     };
-
-    function applyStateToAssets() {
-        if (state.bg) bgImg.src = state.bg;
-        if (state.ladderImg) ladderImgObj.src = state.ladderImg;
-        if (state.snakeImg) snakeImgObj.src = state.snakeImg;
-        state.tokens.forEach((url, i) => { if(url) tImgs[i].src = url; });
-    }
 
     function animate() {
         pulseFrame += 0.035;
         hue = (hue + 2) % 360;
         tPos.forEach((p, i) => {
-            let oldX = p.x, oldY = p.y;
-            p.x += (p.tx - p.x) * 0.15;
-            p.y += (p.ty - p.y) * 0.15;
-            if (state.trailType !== 'none' && Math.hypot(p.x - oldX, p.y - oldY) > 0.5) {
-                let color;
-                if(state.trailType === 'rainbow') color = `hsl(${hue}, 100%, 70%)`;
-                else if(state.trailType === 'custom') color = state.colors.trail;
-                else color = ['#ff4d4d','#4d4dff','#4dff4d','#ffff4d'][i];
-                for(let k=0; k<2; k++) trailParticles.push({ x: p.x, y: p.y, vx: (Math.random()-0.5)*2, vy: (Math.random()-0.5)*2, life: 1.0, color: color, size: Math.random()*3+2 });
-            }
-        });
-        trailParticles.forEach((p, i) => {
-            p.x += p.vx; p.y += p.vy; p.life -= 0.02;
-            if(p.life <= 0) trailParticles.splice(i, 1);
+            p.x += (p.tx - p.x) * 0.2;
+            p.y += (p.ty - p.y) * 0.2;
         });
 
         draw();
 
+        // КОНФЕТТИ (ДОБАВЛЕНО)
         if (won) {
             cnfCtx.clearRect(0, 0, cnfCvs.width, cnfCvs.height);
             if(particles.length < 100) {
-                for(let i=0; i<10; i++) {
+                for(let i=0; i<5; i++) {
                     particles.push({
-                        x: cnfCvs.width/2, y: cnfCvs.height + 20,
-                        vx: (Math.random()-0.5)*30, vy: -Math.random()*40 - 10,
-                        gravity: 0.5, color: `hsl(${Math.random()*360}, 100%, 50%)`,
-                        size: Math.random()*8+4
+                        x: cnfCvs.width/2, y: cnfCvs.height/2,
+                        vx: (Math.random()-0.5)*20, vy: (Math.random()-0.5)*20 - 5,
+                        gravity: 0.2, color: `hsl(${Math.random()*360}, 100%, 50%)`,
+                        size: Math.random()*10+5
                     });
                 }
             }
             particles.forEach((p, i) => {
                 p.x += p.vx; p.y += p.vy; p.vy += p.gravity;
                 cnfCtx.fillStyle = p.color;
-                cnfCtx.beginPath();
-                cnfCtx.arc(p.x, p.y, p.size, 0, Math.PI*2);
-                cnfCtx.fill();
-                if(p.y > cnfCvs.height + 50) particles.splice(i, 1);
+                cnfCtx.beginPath(); cnfCtx.arc(p.x, p.y, p.size, 0, Math.PI*2); cnfCtx.fill();
+                if(p.y > cnfCvs.height) particles.splice(i, 1);
             });
         }
         requestAnimationFrame(animate);
@@ -377,24 +289,20 @@
         ctx.clearRect(0, 0, cvs.width, cvs.height);
         if (bgImg.src) ctx.drawImage(bgImg, 0, 0, cvs.width, cvs.height);
 
-        // START / FINISH TEXTS (2x Bigger + Color Link)
+        // START / FINISH НАДПИСИ (ДОБАВЛЕНО)
         if (state.points.length > 0) {
-            ctx.font = `bold ${state.cellSize * 0.7}px ${state.font}`; // Увеличено в 2 раза
+            ctx.font = `bold ${state.cellSize * 0.6}px ${state.font}`; // В 2 раза больше
             ctx.textAlign = "center";
             ctx.fillStyle = state.colors.dots;
-            
             const start = state.points[0];
             const finish = state.points[state.points.length - 1];
-            
             ctx.fillText("START", start.x * cvs.width, start.y * cvs.height - state.cellSize);
             ctx.fillText("FINISH", finish.x * cvs.width, finish.y * cvs.height - state.cellSize);
         }
 
         state.links.forEach(l => {
             const p1 = state.points[l.from], p2 = state.points[l.to];
-            if (!p1 || !p2) return;
-            const isL = p1.y > p2.y;
-            const img = isL ? ladderImgObj : snakeImgObj;
+            const isL = p1.y > p2.y; const img = isL ? ladderImgObj : snakeImgObj;
             const th = isL ? state.ladderTh : state.snakeTh;
             if (img.src) {
                 ctx.save();
@@ -406,30 +314,19 @@
         });
 
         state.points.forEach((p, i) => {
-            ctx.save();
-            ctx.translate(p.x * cvs.width, p.y * cvs.height);
+            ctx.save(); ctx.translate(p.x * cvs.width, p.y * cvs.height);
             if (state.neon) { ctx.shadowBlur = 15; ctx.shadowColor = state.colors.dots; }
-            ctx.fillStyle = state.colors.dots;
-            ctx.beginPath();
+            ctx.fillStyle = state.colors.dots; ctx.beginPath();
             const s = state.cellSize / 2;
             if (state.cellShape === 'circle') ctx.arc(0, 0, s, 0, Math.PI * 2);
             else if (state.cellShape === 'square') ctx.rect(-s, -s, s * 2, s * 2);
             else ctx.rect(-s, -s / 1.5, s * 2, s * 2 / 1.5);
-            ctx.fill();
-            ctx.fillStyle = "rgba(0,0,0,0.3)"; ctx.font = "bold 14px Arial"; ctx.fillText(i + 1, 0, 5);
-            ctx.restore();
-        });
-
-        trailParticles.forEach(p => {
-            ctx.globalAlpha = p.life; ctx.fillStyle = p.color; ctx.beginPath();
-            ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2); ctx.fill(); ctx.globalAlpha = 1;
+            ctx.fill(); ctx.fillStyle = "rgba(0,0,0,0.2)"; ctx.fillText(i + 1, 0, 5); ctx.restore();
         });
 
         tPos.slice(0, state.playerCount).forEach((p, i) => {
-            ctx.save(); ctx.translate(p.x, p.y);
-            if (tImgs[i].src) ctx.drawImage(tImgs[i], -state.tokenW / 2, -state.tokenH / 2, state.tokenW, state.tokenH);
-            else { ctx.fillStyle = ['#ff4d4d', '#4d4dff', '#4dff4d', '#ffff4d'][i]; ctx.beginPath(); ctx.arc(0, 0, 20, 0, Math.PI * 2); ctx.fill(); }
-            ctx.restore();
+            if (tImgs[i].src) ctx.drawImage(tImgs[i], p.x - state.tokenW / 2, p.y - state.tokenH / 2, state.tokenW, state.tokenH);
+            else { ctx.fillStyle = ['#ff4d4d', '#4d4dff', '#4dff4d', '#ffff4d'][i]; ctx.beginPath(); ctx.arc(p.x, p.y, 20, 0, Math.PI * 2); ctx.fill(); }
         });
 
         if (isGame) drawDice();
@@ -437,19 +334,15 @@
 
     function drawDice() {
         const x = 50, y = cvs.height - 150, sz = 100;
-        ctx.save();
         ctx.fillStyle = (state.diceSkin === 'neon') ? '#000' : 'white';
-        ctx.strokeStyle = '#ccc'; ctx.lineWidth = 2;
-        ctx.beginPath(); ctx.roundRect(x, y, sz, sz, 15); ctx.fill(); ctx.stroke();
+        ctx.beginPath(); ctx.roundRect(x, y, sz, sz, 15); ctx.fill();
         ctx.fillStyle = (state.diceSkin === 'neon') ? '#0ff' : '#333';
         ctx.font = "bold 50px Arial"; ctx.textAlign = "center"; ctx.fillText(diceVal, x + 50, y + 65);
-        ctx.restore();
     }
 
     function rollDice() {
         if (isRoll || won) return;
-        isRoll = true; playDiceSound();
-        let rolls = 0;
+        isRoll = true; let rolls = 0;
         const iv = setInterval(() => {
             diceVal = Math.floor(Math.random() * 6) + 1; rolls++;
             if (rolls > 10) {
@@ -457,17 +350,15 @@
                 const p = tPos[currentPlayer];
                 let currentIdx = state.points.findIndex(pt => Math.hypot(p.tx - pt.x * cvs.width, p.ty - pt.y * cvs.height) < 10);
                 let nextIdx = currentIdx + diceVal;
-                
                 if (nextIdx >= state.points.length - 1) nextIdx = state.points.length - 1;
-
+                
                 p.tx = state.points[nextIdx].x * cvs.width;
                 p.ty = state.points[nextIdx].y * cvs.height;
 
-                // ПРОВЕРКА ПОБЕДЫ: Когда фишка встала на кружок FINISH
+                // ЛОГИКА ПОБЕДЫ (ДОБАВЛЕНО)
                 if (nextIdx === state.points.length - 1) {
                     setTimeout(() => {
                         won = true;
-                        playVictorySfx();
                         document.getElementById('victory-overlay').style.display = 'flex';
                     }, 800);
                 }
@@ -480,46 +371,31 @@
 
     function update() {
         state.bg = document.getElementById('bg-url').value;
-        state.modalBgImg = document.getElementById('modal-bg-url').value;
-        state.music = document.getElementById('music-url').value;
         state.tokens = [document.getElementById('t1').value, document.getElementById('t2').value, document.getElementById('t3').value, document.getElementById('t4').value];
         state.ladderImg = document.getElementById('ladder-url').value;
         state.snakeImg = document.getElementById('snake-url').value;
         state.cellSize = parseInt(document.getElementById('cell-size').value);
-        state.ladderTh = parseInt(document.getElementById('ladder-th').value);
-        state.snakeTh = parseInt(document.getElementById('snake-th').value);
-        state.tokenW = parseInt(document.getElementById('token-w').value);
-        state.tokenH = parseInt(document.getElementById('token-h').value);
         state.playerCount = parseInt(document.getElementById('p-count').value);
         state.font = document.getElementById('game-font').value;
         state.cellShape = document.getElementById('cell-shape').value;
+        state.colors.dots = document.getElementById('c-dots').value;
         state.diceSkin = document.getElementById('dice-skin').value;
         state.neon = document.getElementById('neon-on').checked;
-        state.trailType = document.getElementById('trail-type').value;
-        state.colors.dots = document.getElementById('c-dots').value;
-        state.colors.modalBg = document.getElementById('c-bg').value;
-        state.colors.modalTxt = document.getElementById('c-txt').value;
-        state.colors.btnBg = document.getElementById('c-btn').value;
-        state.colors.trail = document.getElementById('c-trail').value;
+        
+        if (state.bg) bgImg.src = state.bg;
+        if (state.ladderImg) ladderImgObj.src = state.ladderImg;
+        if (state.snakeImg) snakeImgObj.src = state.snakeImg;
+        state.tokens.forEach((url, i) => { if(url) tImgs[i].src = url; });
 
-        document.getElementById('tw-val').innerText = state.tokenW;
-        document.getElementById('th-val').innerText = state.tokenH;
+        document.getElementById('tw-val').innerText = document.getElementById('token-w').value;
+        document.getElementById('th-val').innerText = document.getElementById('token-h').value;
         document.getElementById('sz-val').innerText = state.cellSize;
-        document.getElementById('l-th-val').innerText = state.ladderTh;
-        document.getElementById('s-th-val').innerText = state.snakeTh;
-        document.getElementById('font-preview').style.fontFamily = state.font;
-        document.getElementById('vic-title').style.fontFamily = state.font;
-        document.body.style.fontFamily = state.font;
-
-        applyStateToAssets();
     }
 
     cvs.onmousedown = (e) => {
         if (won) return;
         if (isGame) {
-            if (e.clientX > 40 && e.clientX < 160 && e.clientY > cvs.height - 160 && e.clientY < cvs.height - 40) {
-                rollDice();
-            }
+            if (e.clientX > 40 && e.clientX < 160 && e.clientY > cvs.height - 160 && e.clientY < cvs.height - 40) rollDice();
             return;
         }
         const x = e.clientX / cvs.width, y = e.clientY / cvs.height;
@@ -527,54 +403,35 @@
             const idx = state.points.findIndex(p => Math.hypot(p.x - x, p.y - y) < 0.05);
             if (idx !== -1) {
                 if (linkFrom === null) linkFrom = idx;
-                else {
-                    if (linkFrom !== idx) state.links.push({ from: linkFrom, to: idx });
-                    linkFrom = null;
-                }
+                else { if (linkFrom !== idx) state.links.push({ from: linkFrom, to: idx }); linkFrom = null; }
             }
         } else {
             const idx = state.points.findIndex(p => Math.hypot(p.x - x, p.y - y) < 0.03);
-            if (idx !== -1) dragIdx = idx;
-            else state.points.push({ x, y });
+            if (idx !== -1) dragIdx = idx; else state.points.push({ x, y });
         }
         update();
     };
 
-    cvs.onmousemove = (e) => {
-        if (dragIdx !== null) {
-            state.points[dragIdx].x = e.clientX / cvs.width;
-            state.points[dragIdx].y = e.clientY / cvs.height;
+    cvs.onmousemove = (e) => { if (dragIdx !== null) { state.points[dragIdx].x = e.clientX / cvs.width; state.points[dragIdx].y = e.clientY / cvs.height; } };
+    cvs.onmouseup = () => {
+        if (typeof dragIdx === 'number') {
+            const idx = dragIdx;
+            state.points.forEach((p, pIdx) => { if (Math.hypot(tPos[idx].tx-p.x*cvs.width, tPos[idx].ty-p.y*cvs.height) < 50) { tPos[idx].tx = p.x*cvs.width; tPos[idx].ty = p.y*cvs.height; const link = state.links.find(l => l.from === pIdx); if (link) { setTimeout(() => { tPos[idx].tx = state.points[link.to].x*cvs.width; tPos[idx].ty = state.points[link.to].y*cvs.height; }, 500); } } });
         }
+        dragIdx = null; update();
     };
 
-    cvs.onmouseup = () => { dragIdx = null; };
-
-    function toggleLinkMode() {
-        isLinkMode = !isLinkMode; linkFrom = null;
-        document.getElementById('link-btn').style.background = isLinkMode ? "white" : "#9c27b0";
-        document.getElementById('link-btn').style.color = isLinkMode ? "black" : "white";
-    }
-
+    function resize() { cvs.width = window.innerWidth; cvs.height = window.innerHeight; cnfCvs.width = window.innerWidth; cnfCvs.height = window.innerHeight; }
+    function toggleLinkMode() { isLinkMode = !isLinkMode; linkFrom = null; }
     function clearFieldOnly() { state.points = []; state.links = []; update(); }
     function clearInp(id) { document.getElementById(id).value = ''; update(); }
-    function resize() { 
-        cvs.width = window.innerWidth; cvs.height = window.innerHeight; 
-        cnfCvs.width = cvs.width; cnfCvs.height = cvs.height;
-    }
-
+    
     function save() { 
-        update(); 
-        const s = JSON.parse(JSON.stringify(state)); 
-        s.tasks = []; 
+        update(); const s = JSON.parse(JSON.stringify(state)); s.tasks = []; 
         const url = window.location.origin + window.location.pathname + "?game=" + encode(s);
         navigator.clipboard.writeText(url); alert("Ссылка скопирована!"); 
     }
-
-    function getIframe() { 
-        const url = window.location.origin + window.location.pathname + "?game=" + encode(state); 
-        const code = `<iframe src="${url}" width="100%" height="600px" frameborder="0"></iframe>`; 
-        navigator.clipboard.writeText(code); alert("iFrame код скопирован!"); 
-    }
+    function getIframe() { const url = window.location.origin + window.location.pathname + "?game=" + encode(state); const code = `<iframe src="${url}" width="100%" height="600px" frameborder="0"></iframe>`; navigator.clipboard.writeText(code); alert("Код iFrame скопирован!"); }
 </script>
 </body>
 </html>
