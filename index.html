@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3D Planet Game: Super Editor No-Memory</title>
+    <title>3D Planet Game: Super Editor Fixed</title>
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Comfortaa:wght@700&family=Bungee&family=Kelly+Slab&family=Monoton&family=Pacifico&family=Ruslan+Display&display=swap" rel="stylesheet">
     <style>
         body { margin: 0; overflow: hidden; font-family: sans-serif; background: #1a1a1a; }
@@ -192,7 +192,7 @@
 <div id="task-modal">
     <h2 id="modal-status">ЗАДАНИЕ!</h2>
     <div id="task-question" style="font-size:24px; margin-bottom:20px; font-weight:bold; word-wrap: break-word;"></div>
-    <input type="text" id="answer-input">
+    <input type="text" id="answer-input" placeholder="Введите ответ...">
     <button id="check-btn" onclick="checkAnswer()">CHECK</button>
 </div>
 
@@ -229,7 +229,6 @@
     let linkFrom = null, isLinkMode = false, particles = [], trailParticles = [], questionQueue = [], currentQuestionIdx = 0;
     let pulseFrame = 0, hue = 0, currentPlayer = 0;
 
-    // НОВАЯ ФУНКЦИЯ ДЛЯ ТАБЛИЦ
     async function loadFromSheet(url) {
         if (!url) return;
         let fetchUrl = url.replace('/edit?usp=sharing', '/export?format=csv').replace('/edit#gid=', '/export?format=csv&gid=');
@@ -276,11 +275,6 @@
                 osc.start(); osc.stop(audioCtx.currentTime + 0.05);
             }, i * 70);
         }
-    }
-
-    function playVictorySfx() {
-        const notes = [440, 440, 440, 554, 659];
-        notes.forEach((f, i) => setTimeout(() => playSfx(f, 'triangle', 0.4, 0.1), [0, 0.12, 0.24, 0.36, 0.55][i] * 1000));
     }
 
     function encode(o) { return btoa(unescape(encodeURIComponent(JSON.stringify(o)))); }
@@ -362,8 +356,8 @@
                 if(isGame) { 
                     currentPlayer = (currentPlayer + 1) % state.playerCount; 
                     document.getElementById('turn-indicator').innerText = "ХОД ИГРОКА: " + (currentPlayer + 1); 
-                    setTimeout(showTask, 400); 
-                } 
+                }
+                setTimeout(showTask, 400); 
             } 
         }, 60);
     }
@@ -372,6 +366,8 @@
         if (!state.tasks || !state.tasks.length) return;
         if (currentQuestionIdx >= questionQueue.length) prepareQuestions();
         const taskIdx = questionQueue[currentQuestionIdx];
+        if (taskIdx === undefined) return;
+
         const m = document.getElementById('task-modal');
         m.style.backgroundColor = state.colors.modalBg;
         if(state.modalBgImg) { m.style.backgroundImage = `url(${state.modalBgImg})`; } else { m.style.backgroundImage = 'none'; }
@@ -385,7 +381,17 @@
     function checkAnswer() {
         const m = document.getElementById('task-modal');
         const taskIdx = m.getAttribute('data-ans-idx');
-        if (document.getElementById('answer-input').value.trim().toLowerCase() === state.tasks[taskIdx].a.toLowerCase()) { m.classList.remove('show'); playSfx(600, 'sine', 0.2); currentQuestionIdx++; } else { playSfx(100, 'sawtooth', 0.3); alert("Неверно!"); }
+        const userAns = document.getElementById('answer-input').value.trim().toLowerCase();
+        const realAns = state.tasks[taskIdx].a.toLowerCase();
+
+        if (userAns === realAns) { 
+            m.classList.remove('show'); 
+            playSfx(600, 'sine', 0.2); 
+            currentQuestionIdx++; 
+        } else { 
+            playSfx(100, 'sawtooth', 0.3); 
+            alert("Неверно! Попробуйте еще раз."); 
+        }
     }
 
     function update() {
@@ -410,14 +416,17 @@
         state.trailType = document.getElementById('trail-type').value;
         state.playerCount = parseInt(document.getElementById('p-count').value);
         state.colors = { dots: document.getElementById('c-dots').value, modalBg: document.getElementById('c-bg').value, modalTxt: document.getElementById('c-txt').value, btnBg: document.getElementById('c-btn').value, trail: document.getElementById('c-trail').value };
+        
         document.getElementById('sz-val').innerText = state.cellSize;
         document.getElementById('l-th-val').innerText = state.ladderTh;
         document.getElementById('s-th-val').innerText = state.snakeTh;
         document.getElementById('tw-val').innerText = state.tokenW;
         document.getElementById('th-val').innerText = state.tokenH;
         document.getElementById('font-preview').style.fontFamily = state.font;
+        
         const qs = document.getElementById('qs').value.split('\n'), ans = document.getElementById('ans').value.split('\n');
         state.tasks = qs.map((q, i) => ({ q: q.trim(), a: (ans[i] || '').trim() })).filter(t => t.q);
+        
         applyStateToAssets();
     }
 
@@ -442,54 +451,35 @@
             let baseColor = hasToken ? `hsl(${hue}, 100%, 60%)` : ((linkFrom === i) ? "#e91e63" : state.colors.dots);
 
             ctx.save();
-            // Свечение (Neon Effect)
-            if (state.neon) {
-                ctx.shadowBlur = hasToken ? 35 : 20;
-                ctx.shadowColor = baseColor;
-            }
-
-            // Создаем градиент для хрустального эффекта
+            if (state.neon) { ctx.shadowBlur = hasToken ? 35 : 20; ctx.shadowColor = baseColor; }
             let grad = ctx.createRadialGradient(px - s/4, py - s/4, s/10, px, py, s/2);
             grad.addColorStop(0, "rgba(255, 255, 255, 0.9)");
             grad.addColorStop(0.3, "rgba(255, 255, 255, 0.4)");
             grad.addColorStop(1, "rgba(255, 255, 255, 0.1)");
-            
             ctx.fillStyle = grad;
             ctx.beginPath();
             if (state.cellShape === 'circle') ctx.arc(px, py, s/2, 0, 7);
             else if (state.cellShape === 'square') ctx.roundRect(px-s/2, py-s/2, s, s, 10);
             else ctx.roundRect(px-s, py-s/2, s*2, s, 10);
             ctx.fill();
-
-            // Обводка
-            ctx.strokeStyle = "rgba(255, 255, 255, 0.6)";
-            ctx.lineWidth = 2;
-            ctx.stroke();
-
-            // Цветной ободок
-            ctx.strokeStyle = baseColor;
-            ctx.lineWidth = 1.5;
-            ctx.globalAlpha = 0.8;
-            ctx.stroke();
-
-            // Маленький блик сверху (Highlight)
-            ctx.beginPath();
-            ctx.fillStyle = "rgba(255,255,255,0.7)";
-            if (state.cellShape === 'circle') ctx.arc(px - s/5, py - s/5, s/8, 0, 7);
-            ctx.fill();
+            ctx.strokeStyle = "rgba(255, 255, 255, 0.6)"; ctx.lineWidth = 2; ctx.stroke();
+            ctx.strokeStyle = baseColor; ctx.lineWidth = 1.5; ctx.globalAlpha = 0.8; ctx.stroke();
             ctx.restore();
 
-            // Номер кружка
             ctx.save();
-            ctx.fillStyle = "white";
-            ctx.shadowBlur = 5; ctx.shadowColor = "black";
-            ctx.font = `bold ${s/2.8}px Arial`;
-            ctx.textAlign = "center";
+            ctx.fillStyle = "white"; ctx.shadowBlur = 5; ctx.shadowColor = "black";
+            ctx.font = `bold ${s/2.8}px Arial`; ctx.textAlign = "center";
             ctx.fillText(i+1, px, py + s/10);
             ctx.restore();
         });
 
-        tPos.forEach((p, i) => { if (i >= state.playerCount) return; ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.angle); if (tImgs[i].src && tImgs[i].complete) ctx.drawImage(tImgs[i], -state.tokenW/2, -state.tokenH/2, state.tokenW, state.tokenH); else { ctx.fillStyle = ['#ff4d4d','#4d4dff','#4dff4d','#ffff4d'][i]; ctx.beginPath(); ctx.arc(0,0,20,0,7); ctx.fill(); } ctx.restore(); });
+        tPos.forEach((p, i) => { 
+            if (i >= state.playerCount) return; 
+            ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.angle); 
+            if (tImgs[i].src && tImgs[i].complete) ctx.drawImage(tImgs[i], -state.tokenW/2, -state.tokenH/2, state.tokenW, state.tokenH); 
+            else { ctx.fillStyle = ['#ff4d4d','#4d4dff','#4dff4d','#ffff4d'][i]; ctx.beginPath(); ctx.arc(0,0,20,0,7); ctx.fill(); } 
+            ctx.restore(); 
+        });
         
         let dx = cvs.width-100, dy = cvs.height-100, ds = 80;
         ctx.save(); if(state.diceSkin==='glass') ctx.fillStyle="rgba(255,255,255,0.2)"; else if(state.diceSkin==='gold') ctx.fillStyle="gold"; else ctx.fillStyle="white";
@@ -544,9 +534,10 @@
     function save() { 
         update(); 
         const s = JSON.parse(JSON.stringify(state)); 
-        s.tasks = []; // Удаляем тексты из ссылки для поддержки 50+ кружков
+        // Очищаем задачи ТОЛЬКО если есть внешняя таблица, чтобы не перегружать URL
+        if (s.sheetUrl) s.tasks = []; 
         const url = window.location.origin + window.location.pathname + "?game=" + encode(s);
-        navigator.clipboard.writeText(url); alert("Ссылка для 50+ кружков скопирована!"); 
+        navigator.clipboard.writeText(url); alert("Ссылка скопирована!"); 
     }
     
     function getIframe() { const url = window.location.origin + window.location.pathname + "?game=" + encode(state); const code = `<iframe src="${url}" width="100%" height="600px" frameborder="0"></iframe>`; navigator.clipboard.writeText(code); alert("Код iFrame скопирован!"); }
