@@ -311,10 +311,13 @@
     };
 
     function applyStateToAssets() {
-        if (state.bg) bgImg.src = state.bg;
-        if (state.ladderImg) ladderImgObj.src = state.ladderImg;
-        if (state.snakeImg) snakeImgObj.src = state.snakeImg;
-        state.tokens.forEach((url, i) => { if(url) tImgs[i].src = url; });
+        if (state.bg && state.bg.trim() !== '') bgImg.src = state.bg;
+        if (state.ladderImg && state.ladderImg.trim() !== '') ladderImgObj.src = state.ladderImg;
+        if (state.snakeImg && state.snakeImg.trim() !== '') snakeImgObj.src = state.snakeImg;
+        state.tokens.forEach((url, i) => { 
+            if(url && url.trim() !== '') tImgs[i].src = url; 
+            else tImgs[i].src = ''; // Сбрасываем, если пусто
+        });
     }
 
     function animate() {
@@ -432,7 +435,7 @@
 
     function draw() {
         ctx.clearRect(0, 0, cvs.width, cvs.height);
-        if (bgImg.src && bgImg.complete) ctx.drawImage(bgImg, 0, 0, cvs.width, cvs.height);
+        if (bgImg.src && bgImg.complete && bgImg.naturalWidth !== 0) ctx.drawImage(bgImg, 0, 0, cvs.width, cvs.height);
         
         state.links.forEach(link => {
             const f = state.points[link.from], t = state.points[link.to];
@@ -440,7 +443,7 @@
                 const x1 = f.x*cvs.width, y1 = f.y*cvs.height, x2 = t.x*cvs.width, y2 = t.y*cvs.height;
                 const dist = Math.hypot(x2-x1, y2-y1), angle = Math.atan2(y2-y1, x2-x1);
                 const isL = (y2 < y1); let img = isL ? ladderImgObj : snakeImgObj; let th = isL ? state.ladderTh : state.snakeTh;
-                if (img.complete && img.src) { ctx.save(); ctx.translate(x1, y1); ctx.rotate(angle + Math.PI/2); ctx.drawImage(img, -th/2, -dist, th, dist); ctx.restore(); }
+                if (img.complete && img.src && img.naturalWidth !== 0) { ctx.save(); ctx.translate(x1, y1); ctx.rotate(angle + Math.PI/2); ctx.drawImage(img, -th/2, -dist, th, dist); ctx.restore(); }
             }
         });
 
@@ -476,7 +479,7 @@
         tPos.forEach((p, i) => { 
             if (i >= state.playerCount) return; 
             ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.angle); 
-            if (tImgs[i].src && tImgs[i].complete) ctx.drawImage(tImgs[i], -state.tokenW/2, -state.tokenH/2, state.tokenW, state.tokenH); 
+            if (tImgs[i].src && tImgs[i].complete && tImgs[i].naturalWidth !== 0) ctx.drawImage(tImgs[i], -state.tokenW/2, -state.tokenH/2, state.tokenW, state.tokenH); 
             else { ctx.fillStyle = ['#ff4d4d','#4d4dff','#4dff4d','#ffff4d'][i]; ctx.beginPath(); ctx.arc(0,0,20,0,7); ctx.fill(); } 
             ctx.restore(); 
         });
@@ -534,13 +537,12 @@
     function save() { 
         update(); 
         const s = JSON.parse(JSON.stringify(state)); 
-        // Очищаем задачи ТОЛЬКО если есть внешняя таблица, чтобы не перегружать URL
         if (s.sheetUrl) s.tasks = []; 
         const url = window.location.origin + window.location.pathname + "?game=" + encode(s);
         navigator.clipboard.writeText(url); alert("Ссылка скопирована!"); 
     }
     
-    function getIframe() { const url = window.location.origin + window.location.pathname + "?game=" + encode(state); const code = `<iframe src="${url}" width="100%" height="600px" frameborder="0"></iframe>`; navigator.clipboard.writeText(code); alert("Код iFrame скопирован!"); }
+    function getIframe() { const url = window.location.origin + window.location.pathname + "?game=" + encode(state); const code = `<iframe src="${url}" width="100%" height="600px" frameborder="0"></iframe>`; navigator.clipboard.writeText(code); alert("Код iFrame скопирована!"); }
     function clearFieldOnly() { if(confirm('Очистить все кружки?')) { state.points = []; state.links = []; update(); } }
     function clearInp(id) { document.getElementById(id).value = ''; update(); }
     window.onresize = resize;
