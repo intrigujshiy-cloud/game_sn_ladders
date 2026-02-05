@@ -41,20 +41,19 @@
         .half-width-sliders div { flex: 1; }
         .size-label { font-size: 11px; margin-bottom: 4px; display: block; }
         #font-preview { background: #444; padding: 10px; border-radius: 5px; text-align: center; margin-bottom: 10px; font-size: 18px; border: 1px solid #666; min-height: 25px; }
-        
-        /* СТИЛИ ПОБЕДЫ (ДОБАВЛЕНО) */
+
+        /* ЭКРАН ПОБЕДЫ */
         #victory-overlay { 
             display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
-            background: rgba(0,0,0,0.85); z-index: 20000;
+            background: rgba(0,0,0,0.9); z-index: 20000;
             flex-direction: column; justify-content: center; align-items: center; text-align: center; 
         }
         #confetti-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
-        .cup { font-size: 150px; z-index: 20001; position: relative; animation: bounce 2s infinite; }
+        .cup { font-size: 150px; animation: bounce 2s infinite; }
         @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-20px); } }
         .retry-btn { 
             margin-top: 30px; padding: 15px 40px; font-size: 24px; cursor: pointer; 
-            background: #4CAF50; color: white; border: none; border-radius: 50px; 
-            font-weight: bold; z-index: 20002; box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            background: #4CAF50; color: white; border: none; border-radius: 50px; font-weight: bold;
         }
     </style>
 </head>
@@ -206,7 +205,8 @@
         cellSize: 60, ladderTh: 60, snakeTh: 60, tokenW: 50, tokenH: 50, tasks: [], playerCount: 4,
         colors: { dots: '#ffffff', modalBg: '#fff9e6', modalTxt: '#333333', btnBg: '#4CAF50', trail: '#ffffff' }, 
         neon: true, cellShape: 'circle', font: 'Arial', diceSkin: 'classic',
-        trailType: 'match', links: []
+        trailType: 'match', links: [],
+        startPos: {x: 0.1, y: 0.1}, finishPos: {x: 0.9, y: 0.1} // Новые независимые надписи
     };
     
     const bgImg = new Image();
@@ -219,7 +219,7 @@
         {x:window.innerWidth-150,y:120,tx:window.innerWidth-150,ty:120}, 
         {x:window.innerWidth-80,y:120,tx:window.innerWidth-80,ty:120}
     ];
-    let dragIdx = null, isGame = false, diceVal = "?", isRoll = false, won = false;
+    let dragIdx = null, dragType = null, isGame = false, diceVal = "?", isRoll = false, won = false;
     let linkFrom = null, isLinkMode = false, particles = [], trailParticles = [];
     let pulseFrame = 0, hue = 0, currentPlayer = 0;
 
@@ -253,34 +253,15 @@
     };
 
     function animate() {
-        pulseFrame += 0.035;
-        hue = (hue + 2) % 360;
-        tPos.forEach((p, i) => {
-            p.x += (p.tx - p.x) * 0.2;
-            p.y += (p.ty - p.y) * 0.2;
-        });
-
+        pulseFrame += 0.035; hue = (hue + 2) % 360;
+        tPos.forEach(p => { p.x += (p.tx - p.x) * 0.2; p.y += (p.ty - p.y) * 0.2; });
         draw();
-
-        // КОНФЕТТИ (ДОБАВЛЕНО)
         if (won) {
             cnfCtx.clearRect(0, 0, cnfCvs.width, cnfCvs.height);
-            if(particles.length < 100) {
-                for(let i=0; i<5; i++) {
-                    particles.push({
-                        x: cnfCvs.width/2, y: cnfCvs.height/2,
-                        vx: (Math.random()-0.5)*20, vy: (Math.random()-0.5)*20 - 5,
-                        gravity: 0.2, color: `hsl(${Math.random()*360}, 100%, 50%)`,
-                        size: Math.random()*10+5
-                    });
-                }
+            if(particles.length < 80) {
+                for(let i=0; i<5; i++) particles.push({x:cnfCvs.width/2, y:cnfCvs.height/2, vx:(Math.random()-0.5)*15, vy:(Math.random()-0.5)*15-5, gravity:0.2, color:`hsl(${Math.random()*360},100%,50%)`, size:Math.random()*10+5});
             }
-            particles.forEach((p, i) => {
-                p.x += p.vx; p.y += p.vy; p.vy += p.gravity;
-                cnfCtx.fillStyle = p.color;
-                cnfCtx.beginPath(); cnfCtx.arc(p.x, p.y, p.size, 0, Math.PI*2); cnfCtx.fill();
-                if(p.y > cnfCvs.height) particles.splice(i, 1);
-            });
+            particles.forEach((p, i) => { p.x += p.vx; p.y += p.vy; p.vy += p.gravity; cnfCtx.fillStyle=p.color; cnfCtx.beginPath(); cnfCtx.arc(p.x,p.y,p.size,0,Math.PI*2); cnfCtx.fill(); if(p.y > cnfCvs.height) particles.splice(i,1); });
         }
         requestAnimationFrame(animate);
     }
@@ -289,16 +270,14 @@
         ctx.clearRect(0, 0, cvs.width, cvs.height);
         if (bgImg.src) ctx.drawImage(bgImg, 0, 0, cvs.width, cvs.height);
 
-        // START / FINISH НАДПИСИ (ДОБАВЛЕНО)
-        if (state.points.length > 0) {
-            ctx.font = `bold ${state.cellSize * 0.6}px ${state.font}`; // В 2 раза больше
-            ctx.textAlign = "center";
-            ctx.fillStyle = state.colors.dots;
-            const start = state.points[0];
-            const finish = state.points[state.points.length - 1];
-            ctx.fillText("START", start.x * cvs.width, start.y * cvs.height - state.cellSize);
-            ctx.fillText("FINISH", finish.x * cvs.width, finish.y * cvs.height - state.cellSize);
-        }
+        // НЕЗАВИСИМЫЕ НАДПИСИ
+        ctx.font = `bold ${state.cellSize * 0.7}px ${state.font}`;
+        ctx.textAlign = "center";
+        ctx.fillStyle = state.colors.dots;
+        if(state.neon) { ctx.shadowBlur = 10; ctx.shadowColor = state.colors.dots; }
+        ctx.fillText("START", state.startPos.x * cvs.width, state.startPos.y * cvs.height);
+        ctx.fillText("FINISH", state.finishPos.x * cvs.width, state.finishPos.y * cvs.height);
+        ctx.shadowBlur = 0;
 
         state.links.forEach(l => {
             const p1 = state.points[l.from], p2 = state.points[l.to];
@@ -321,7 +300,7 @@
             if (state.cellShape === 'circle') ctx.arc(0, 0, s, 0, Math.PI * 2);
             else if (state.cellShape === 'square') ctx.rect(-s, -s, s * 2, s * 2);
             else ctx.rect(-s, -s / 1.5, s * 2, s * 2 / 1.5);
-            ctx.fill(); ctx.fillStyle = "rgba(0,0,0,0.2)"; ctx.fillText(i + 1, 0, 5); ctx.restore();
+            ctx.fill(); ctx.fillStyle = "rgba(0,0,0,0.2)"; ctx.font = "bold 14px Arial"; ctx.fillText(i + 1, 0, 5); ctx.restore();
         });
 
         tPos.slice(0, state.playerCount).forEach((p, i) => {
@@ -329,15 +308,13 @@
             else { ctx.fillStyle = ['#ff4d4d', '#4d4dff', '#4dff4d', '#ffff4d'][i]; ctx.beginPath(); ctx.arc(p.x, p.y, 20, 0, Math.PI * 2); ctx.fill(); }
         });
 
-        if (isGame) drawDice();
-    }
-
-    function drawDice() {
-        const x = 50, y = cvs.height - 150, sz = 100;
-        ctx.fillStyle = (state.diceSkin === 'neon') ? '#000' : 'white';
-        ctx.beginPath(); ctx.roundRect(x, y, sz, sz, 15); ctx.fill();
-        ctx.fillStyle = (state.diceSkin === 'neon') ? '#0ff' : '#333';
-        ctx.font = "bold 50px Arial"; ctx.textAlign = "center"; ctx.fillText(diceVal, x + 50, y + 65);
+        if (isGame) {
+            const x = 50, y = cvs.height - 150, sz = 100;
+            ctx.fillStyle = (state.diceSkin === 'neon') ? '#000' : 'white';
+            ctx.beginPath(); ctx.roundRect(x, y, sz, sz, 15); ctx.fill();
+            ctx.fillStyle = (state.diceSkin === 'neon') ? '#0ff' : '#333';
+            ctx.font = "bold 50px Arial"; ctx.textAlign = "center"; ctx.fillText(diceVal, x + 50, y + 65);
+        }
     }
 
     function rollDice() {
@@ -351,23 +328,55 @@
                 let currentIdx = state.points.findIndex(pt => Math.hypot(p.tx - pt.x * cvs.width, p.ty - pt.y * cvs.height) < 10);
                 let nextIdx = currentIdx + diceVal;
                 if (nextIdx >= state.points.length - 1) nextIdx = state.points.length - 1;
+                p.tx = state.points[nextIdx].x * cvs.width; p.ty = state.points[nextIdx].y * cvs.height;
                 
-                p.tx = state.points[nextIdx].x * cvs.width;
-                p.ty = state.points[nextIdx].y * cvs.height;
-
-                // ЛОГИКА ПОБЕДЫ (ДОБАВЛЕНО)
                 if (nextIdx === state.points.length - 1) {
-                    setTimeout(() => {
-                        won = true;
-                        document.getElementById('victory-overlay').style.display = 'flex';
-                    }, 800);
+                    setTimeout(() => { won = true; document.getElementById('victory-overlay').style.display = 'flex'; }, 800);
                 }
-
                 currentPlayer = (currentPlayer + 1) % state.playerCount;
                 document.getElementById('turn-indicator').innerText = `ХОД ИГРОКА: ${currentPlayer + 1}`;
             }
         }, 80);
     }
+
+    cvs.onmousedown = (e) => {
+        if (won) return;
+        const x = e.clientX / cvs.width, y = e.clientY / cvs.height;
+        if (isGame) {
+            if (e.clientX > 40 && e.clientX < 160 && e.clientY > cvs.height - 160 && e.clientY < cvs.height - 40) rollDice();
+            return;
+        }
+
+        if (Math.hypot(state.startPos.x - x, state.startPos.y - y) < 0.05) { dragType = 'start'; return; }
+        if (Math.hypot(state.finishPos.x - x, state.finishPos.y - y) < 0.05) { dragType = 'finish'; return; }
+
+        if (isLinkMode) {
+            const idx = state.points.findIndex(p => Math.hypot(p.x - x, p.y - y) < 0.05);
+            if (idx !== -1) {
+                if (linkFrom === null) linkFrom = idx;
+                else { if (linkFrom !== idx) state.links.push({ from: linkFrom, to: idx }); linkFrom = null; }
+            }
+        } else {
+            const idx = state.points.findIndex(p => Math.hypot(p.x - x, p.y - y) < 0.03);
+            if (idx !== -1) { dragIdx = idx; dragType = 'point'; } else state.points.push({ x, y });
+        }
+        update();
+    };
+
+    cvs.onmousemove = (e) => {
+        const x = e.clientX / cvs.width, y = e.clientY / cvs.height;
+        if (dragType === 'point' && dragIdx !== null) { state.points[dragIdx].x = x; state.points[dragIdx].y = y; }
+        if (dragType === 'start') { state.startPos.x = x; state.startPos.y = y; }
+        if (dragType === 'finish') { state.finishPos.x = x; state.finishPos.y = y; }
+    };
+
+    cvs.onmouseup = () => {
+        if (dragType === 'point' && typeof dragIdx === 'number') {
+            const idx = dragIdx;
+            state.points.forEach((p, pIdx) => { if (Math.hypot(tPos[idx].tx-p.x*cvs.width, tPos[idx].ty-p.y*cvs.height) < 50) { tPos[idx].tx = p.x*cvs.width; tPos[idx].ty = p.y*cvs.height; const link = state.links.find(l => l.from === pIdx); if (link) { setTimeout(() => { tPos[idx].tx = state.points[link.to].x*cvs.width; tPos[idx].ty = state.points[link.to].y*cvs.height; }, 500); } } });
+        }
+        dragIdx = null; dragType = null; update();
+    };
 
     function update() {
         state.bg = document.getElementById('bg-url').value;
@@ -392,46 +401,26 @@
         document.getElementById('sz-val').innerText = state.cellSize;
     }
 
-    cvs.onmousedown = (e) => {
-        if (won) return;
-        if (isGame) {
-            if (e.clientX > 40 && e.clientX < 160 && e.clientY > cvs.height - 160 && e.clientY < cvs.height - 40) rollDice();
-            return;
-        }
-        const x = e.clientX / cvs.width, y = e.clientY / cvs.height;
-        if (isLinkMode) {
-            const idx = state.points.findIndex(p => Math.hypot(p.x - x, p.y - y) < 0.05);
-            if (idx !== -1) {
-                if (linkFrom === null) linkFrom = idx;
-                else { if (linkFrom !== idx) state.links.push({ from: linkFrom, to: idx }); linkFrom = null; }
-            }
-        } else {
-            const idx = state.points.findIndex(p => Math.hypot(p.x - x, p.y - y) < 0.03);
-            if (idx !== -1) dragIdx = idx; else state.points.push({ x, y });
-        }
-        update();
-    };
-
-    cvs.onmousemove = (e) => { if (dragIdx !== null) { state.points[dragIdx].x = e.clientX / cvs.width; state.points[dragIdx].y = e.clientY / cvs.height; } };
-    cvs.onmouseup = () => {
-        if (typeof dragIdx === 'number') {
-            const idx = dragIdx;
-            state.points.forEach((p, pIdx) => { if (Math.hypot(tPos[idx].tx-p.x*cvs.width, tPos[idx].ty-p.y*cvs.height) < 50) { tPos[idx].tx = p.x*cvs.width; tPos[idx].ty = p.y*cvs.height; const link = state.links.find(l => l.from === pIdx); if (link) { setTimeout(() => { tPos[idx].tx = state.points[link.to].x*cvs.width; tPos[idx].ty = state.points[link.to].y*cvs.height; }, 500); } } });
-        }
-        dragIdx = null; update();
-    };
-
     function resize() { cvs.width = window.innerWidth; cvs.height = window.innerHeight; cnfCvs.width = window.innerWidth; cnfCvs.height = window.innerHeight; }
     function toggleLinkMode() { isLinkMode = !isLinkMode; linkFrom = null; }
     function clearFieldOnly() { state.points = []; state.links = []; update(); }
     function clearInp(id) { document.getElementById(id).value = ''; update(); }
-    
-    function save() { 
-        update(); const s = JSON.parse(JSON.stringify(state)); s.tasks = []; 
-        const url = window.location.origin + window.location.pathname + "?game=" + encode(s);
-        navigator.clipboard.writeText(url); alert("Ссылка скопирована!"); 
-    }
+    function save() { update(); const s = JSON.parse(JSON.stringify(state)); s.tasks = []; const url = window.location.origin + window.location.pathname + "?game=" + encode(s); navigator.clipboard.writeText(url); alert("Ссылка скопирована!"); }
     function getIframe() { const url = window.location.origin + window.location.pathname + "?game=" + encode(state); const code = `<iframe src="${url}" width="100%" height="600px" frameborder="0"></iframe>`; navigator.clipboard.writeText(code); alert("Код iFrame скопирован!"); }
+
+    // ТВОЙ КОД ЗАГРУЗКИ ИЗ ТАБЛИЦ (БЕЗ ИЗМЕНЕНИЙ)
+    async function loadFromSheet(url) {
+        if (!url.includes('docs.google.com')) return;
+        const id = url.split('/d/')[1].split('/')[0];
+        const csvUrl = `https://docs.google.com/spreadsheets/d/${id}/export?format=csv`;
+        try {
+            const resp = await fetch(csvUrl); const txt = await resp.text();
+            const rows = txt.split('\n').map(r => r.split(','));
+            state.tasks = rows.map(r => ({ q: r[0]?.trim(), a: r[1]?.trim() })).filter(t => t.q);
+            document.getElementById('qs').value = state.tasks.map(t => t.q).join('\n');
+            document.getElementById('ans').value = state.tasks.map(t => t.a).join('\n');
+        } catch(e) { console.error("Ошибка таблицы:", e); }
+    }
 </script>
 </body>
 </html>
