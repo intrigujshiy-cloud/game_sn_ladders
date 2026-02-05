@@ -63,16 +63,8 @@
 
 <div id="panel">
     <h3 style="margin:0 0 10px 0; color: #4CAF50;">Конструктор (Rainbow Crystal)</h3>
-
-    <div style="background: #1e3a1e; padding: 10px; border-radius: 5px; margin-bottom: 10px; border: 1px solid #4CAF50;">
-        <label style="font-size:11px; color: #4CAF50; font-weight: bold;">ИМПОРТ ИЗ GOOGLE ТАБЛИЦЫ:</label>
-        <div class="input-wrap">
-            <input type="text" id="sheet-url" placeholder="Ссылка на CSV" oninput="loadFromSheet(this.value)">
-            <button class="clear-btn" onclick="clearInp('sheet-url')">×</button>
-        </div>
-        <p style="font-size: 9px; margin: 0; color: #888;">Вставьте ссылку на опубликованный CSV</p>
-    </div>
     
+    <div class="input-wrap"><input type="text" id="sheet-url" placeholder="Ссылка на Google Таблицу (CSV)" oninput="loadFromSheet(this.value)"><button class="clear-btn" onclick="clearInp('sheet-url')">×</button></div>
     <div class="input-wrap"><input type="text" id="bg-url" placeholder="Ссылка на ФОН ИГРЫ" oninput="update()"><button class="clear-btn" onclick="clearInp('bg-url')">×</button></div>
     <div class="input-wrap"><input type="text" id="modal-bg-url" placeholder="Ссылка на ФОН ОКНА (URL)" oninput="update()"><button class="clear-btn" onclick="clearInp('modal-bg-url')">×</button></div>
     <div class="input-wrap"><input type="text" id="music-url" placeholder="Ссылка на МУЗЫКУ (MP3)" oninput="update()"><button class="clear-btn" onclick="clearInp('music-url')">×</button></div>
@@ -143,8 +135,8 @@
     <div class="input-wrap"><input type="text" id="snake-url" placeholder="URL Змеи" oninput="update()"><button class="clear-btn" onclick="clearInp('snake-url')">×</button></div>
 
     <div class="tasks-row">
-        <div><label style="font-size:10px">ВОПРОСЫ (QS)</label><textarea id="qs" oninput="update()"></textarea></div>
-        <div><label style="font-size:10px">ОТВЕТЫ (ANS)</label><textarea id="ans" oninput="update()"></textarea></div>
+        <div><label style="font-size:10px">ВОПРОСЫ</label><textarea id="qs" oninput="update()"></textarea></div>
+        <div><label style="font-size:10px">ОТВЕТЫ</label><textarea id="ans" oninput="update()"></textarea></div>
     </div>
 
     <div class="size-settings">
@@ -217,7 +209,7 @@
         colors: { dots: '#ffffff', modalBg: '#fff9e6', modalTxt: '#333333', btnBg: '#4CAF50', trail: '#ffffff' }, 
         neon: true, randQ: true, cellShape: 'circle', font: 'Arial', diceSkin: 'classic',
         trailType: 'match', startPos: {x:400, y:150}, finishPos: {x:400, y:250}, links: [],
-        sheetUrl: '' // НОВОЕ: сохранение ссылки на таблицу
+        sheetUrl: ''
     };
 
     const bgImg = new Image();
@@ -236,7 +228,7 @@
     let linkFrom = null, isLinkMode = false, particles = [], trailParticles = [], questionQueue = [], currentQuestionIdx = 0;
     let pulseFrame = 0, hue = 0, currentPlayer = 0;
 
-    // НОВАЯ ФУНКЦИЯ ДЛЯ ЗАГРУЗКИ ТАБЛИЦЫ
+    // ФУНКЦИЯ ЗАГРУЗКИ ТАБЛИЦЫ
     async function loadFromSheet(url) {
         if (!url || !url.includes('output=csv')) return;
         try {
@@ -253,8 +245,9 @@
             document.getElementById('qs').value = qsArr.join('\n');
             document.getElementById('ans').value = ansArr.join('\n');
             state.sheetUrl = url;
-            update(); // Синхронизируем с основным стейтом
-        } catch (e) { console.error("Ошибка загрузки таблицы", e); }
+            update();
+            prepareQuestions();
+        } catch (e) { console.error("Sheet error", e); }
     }
 
     function hexToRgb(hex) {
@@ -320,7 +313,6 @@
                 state = decode(d); isGame = true; 
                 document.getElementById('panel').style.display = 'none'; 
                 document.getElementById('turn-indicator').style.display = 'block';
-                // Если в ссылке была таблица, подгружаем её актуальные данные
                 if (state.sheetUrl) loadFromSheet(state.sheetUrl);
             } catch(e) { console.error(e); } 
         }
@@ -365,7 +357,10 @@
     function roll() {
         if (isRoll || won) return;
         isRoll = true; playDiceSound(); if(bgMusic.paused && state.music) bgMusic.play().catch(()=>{});
-        let c = 0; const iv = setInterval(() => { diceVal = Math.floor(Math.random() * 6) + 1; if (++c > 12) { clearInterval(iv); isRoll = false; if(isGame) { currentPlayer = (currentPlayer + 1) % state.playerCount; document.getElementById('turn-indicator').innerText = "ХОД ИГРОКА: " + (currentPlayer + 1); } setTimeout(showTask, 300); } }, 60);
+        let c = 0; const iv = setInterval(() => { diceVal = Math.floor(Math.random() * 6) + 1; if (++c > 12) { clearInterval(iv); isRoll = false; if(isGame) { currentPlayer = (currentPlayer + 1) % state.playerCount; document.getElementById('turn-indicator').innerText = "ХОД ИГРОКА: " + (currentPlayer + 1); } 
+        // ВЫБРОСИЛИ КУБИК - ПОЛУЧИЛИ ОКНО (КАК В ОРИГИНАЛЕ)
+        setTimeout(showTask, 300); 
+        } }, 60);
     }
 
     function showTask() {
@@ -384,12 +379,12 @@
 
     function checkAnswer() {
         const m = document.getElementById('task-modal'); const taskIdx = m.getAttribute('data-ans-idx');
-        if (document.getElementById('answer-input').value.trim().toLowerCase() === state.tasks[taskIdx].a.toLowerCase()) { m.classList.remove('show'); playSfx(600, 'sine', 0.2); currentQuestionIdx++; } else { playSfx(100, 'sawtooth', 0.3); alert("Wrong!"); }
+        if (document.getElementById('answer-input').value.trim().toLowerCase() === state.tasks[taskIdx].a.toLowerCase()) { m.classList.remove('show'); playSfx(600, 'sine', 0.2); currentQuestionIdx++; } else { playSfx(100, 'sawtooth', 0.3); alert("Неверно!"); }
     }
 
     function update() {
         if(isGame) return;
-        state.sheetUrl = document.getElementById('sheet-url').value; // Сохраняем URL таблицы
+        state.sheetUrl = document.getElementById('sheet-url').value;
         state.bg = document.getElementById('bg-url').value;
         state.modalBgImg = document.getElementById('modal-bg-url').value;
         const newMusic = document.getElementById('music-url').value;
