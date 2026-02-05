@@ -212,7 +212,8 @@
         cellSize: 60, ladderTh: 60, snakeTh: 60, tokenW: 50, tokenH: 50, tasks: [], playerCount: 4,
         colors: { dots: '#ffffff', modalBg: '#fff9e6', modalTxt: '#333333', btnBg: '#4CAF50', trail: '#ffffff' }, 
         neon: true, randQ: true, cellShape: 'circle', font: 'Arial', diceSkin: 'classic',
-        trailType: 'match', links: [], sheetUrl: ''
+        trailType: 'match', links: [], sheetUrl: '',
+        startPos: {x: 0.1, y: 0.8}, finishPos: {x: 0.9, y: 0.2} // Координаты для START и FINISH
     };
     
     const bgImg = new Image();
@@ -229,7 +230,6 @@
     let linkFrom = null, isLinkMode = false, particles = [], trailParticles = [], questionQueue = [], currentQuestionIdx = 0;
     let pulseFrame = 0, hue = 0, currentPlayer = 0;
 
-    // НОВАЯ ФУНКЦИЯ ДЛЯ ТАБЛИЦ
     async function loadFromSheet(url) {
         if (!url) return;
         let fetchUrl = url.replace('/edit?usp=sharing', '/export?format=csv').replace('/edit#gid=', '/export?format=csv&gid=');
@@ -425,6 +425,19 @@
         ctx.clearRect(0, 0, cvs.width, cvs.height);
         if (bgImg.src && bgImg.complete) ctx.drawImage(bgImg, 0, 0, cvs.width, cvs.height);
         
+        // Отрисовка START / FINISH
+        ctx.save();
+        ctx.font = `bold 40px ${state.font}`;
+        ctx.textAlign = "center";
+        ctx.shadowBlur = 15;
+        ctx.shadowColor = "lime";
+        ctx.fillStyle = "lime";
+        ctx.fillText("START", state.startPos.x * cvs.width, state.startPos.y * cvs.height);
+        ctx.shadowColor = "red";
+        ctx.fillStyle = "red";
+        ctx.fillText("FINISH", state.finishPos.x * cvs.width, state.finishPos.y * cvs.height);
+        ctx.restore();
+
         state.links.forEach(link => {
             const f = state.points[link.from], t = state.points[link.to];
             if (f && t) {
@@ -442,13 +455,11 @@
             let baseColor = hasToken ? `hsl(${hue}, 100%, 60%)` : ((linkFrom === i) ? "#e91e63" : state.colors.dots);
 
             ctx.save();
-            // Свечение (Neon Effect)
             if (state.neon) {
                 ctx.shadowBlur = hasToken ? 35 : 20;
                 ctx.shadowColor = baseColor;
             }
 
-            // Создаем градиент для хрустального эффекта
             let grad = ctx.createRadialGradient(px - s/4, py - s/4, s/10, px, py, s/2);
             grad.addColorStop(0, "rgba(255, 255, 255, 0.9)");
             grad.addColorStop(0.3, "rgba(255, 255, 255, 0.4)");
@@ -461,25 +472,21 @@
             else ctx.roundRect(px-s, py-s/2, s*2, s, 10);
             ctx.fill();
 
-            // Обводка
             ctx.strokeStyle = "rgba(255, 255, 255, 0.6)";
             ctx.lineWidth = 2;
             ctx.stroke();
 
-            // Цветной ободок
             ctx.strokeStyle = baseColor;
             ctx.lineWidth = 1.5;
             ctx.globalAlpha = 0.8;
             ctx.stroke();
 
-            // Маленький блик сверху (Highlight)
             ctx.beginPath();
             ctx.fillStyle = "rgba(255,255,255,0.7)";
             if (state.cellShape === 'circle') ctx.arc(px - s/5, py - s/5, s/8, 0, 7);
             ctx.fill();
             ctx.restore();
 
-            // Номер кружка
             ctx.save();
             ctx.fillStyle = "white";
             ctx.shadowBlur = 5; ctx.shadowColor = "black";
@@ -504,7 +511,12 @@
         const y = e.clientY - rect.top;
         if (x > cvs.width-120 && y > cvs.height-120) { roll(); return; }
         for(let i=0; i<state.playerCount; i++) { if (Math.hypot(x-tPos[i].x, y-tPos[i].y) < 30) { dragIdx = i; return; } }
+        
+        // Проверка захвата надписей (только в конструкторе)
         if (!isGame) {
+            if (Math.hypot(x - state.startPos.x * cvs.width, y - state.startPos.y * cvs.height) < 60) { dragIdx = 'start'; return; }
+            if (Math.hypot(x - state.finishPos.x * cvs.width, y - state.finishPos.y * cvs.height) < 60) { dragIdx = 'finish'; return; }
+
             for (let i=0; i<state.points.length; i++) {
                 if (Math.hypot(x-state.points[i].x*cvs.width, y-state.points[i].y*cvs.height) < 30) {
                     if (isLinkMode) { if (linkFrom === null) linkFrom = i; else { if(linkFrom !== i) state.links.push({from: linkFrom, to: i}); linkFrom = null; } } 
@@ -522,6 +534,8 @@
         const x = e.clientX - rect.left;
         const y = e.clientY - rect.top;
         if (typeof dragIdx === 'number') { tPos[dragIdx].tx = x; tPos[dragIdx].ty = y; tPos[dragIdx].x = x; tPos[dragIdx].y = y; }
+        else if (dragIdx === 'start') { state.startPos.x = x / cvs.width; state.startPos.y = y / cvs.height; }
+        else if (dragIdx === 'finish') { state.finishPos.x = x / cvs.width; state.finishPos.y = y / cvs.height; }
         else if (typeof dragIdx === 'string' && dragIdx.startsWith('p')) { state.points[dragIdx.substring(1)].x = x/cvs.width; state.points[dragIdx.substring(1)].y = y/cvs.height; }
     };
 
@@ -544,7 +558,7 @@
     function save() { 
         update(); 
         const s = JSON.parse(JSON.stringify(state)); 
-        s.tasks = []; // Удаляем тексты из ссылки для поддержки 50+ кружков
+        s.tasks = []; 
         const url = window.location.origin + window.location.pathname + "?game=" + encode(s);
         navigator.clipboard.writeText(url); alert("Ссылка для 50+ кружков скопирована!"); 
     }
